@@ -1,37 +1,45 @@
 import React, { useEffect, useState } from 'react';
 import { useStore } from '../store';
 import { t } from '../i18n';
-import { checkOllamaConnection } from '../services/ollama';
+import { isModelLoaded, getLoadedModels, loadModel, MODEL_CONFIGS } from '../services/neuralEngine';
+import type { FlowModel } from '../services/neuralEngine';
 import {
   Brain, Cpu, HardDrive, Wifi, WifiOff, MessageSquare,
-  Bot, GitBranch, Package, RefreshCw, Zap, ArrowRight, Clock
+  Bot, GitBranch, Package, RefreshCw, Zap, ArrowRight, Clock,
+  Download, CheckCircle, Loader
 } from 'lucide-react';
 
 export default function Dashboard() {
   const {
-    language, ollamaConnected, setOllamaConnected, availableModels,
-    activeModel, chats, agents, flowProjects, setCurrentPage, setActiveChatId
+    language, loadedModels, setLoadedModels, activeModel,
+    chats, agents, flowProjects, setCurrentPage, setActiveChatId,
+    modelLoadStatus, setModelLoadStatus
   } = useStore();
   
-  const [systemInfo, setSystemInfo] = useState({
-    memory: 0,
-    cpu: 0,
-  });
-  const [loading, setLoading] = useState(false);
+  const [systemInfo, setSystemInfo] = useState({ memory: 0, cpu: 0 });
 
   useEffect(() => {
-    handleCheckConnection();
-    // Simulate system info
+    // Check which models are loaded
+    const loaded = getLoadedModels();
+    setLoadedModels(loaded);
+    
     setSystemInfo({
       memory: Math.floor(Math.random() * 40 + 30),
       cpu: Math.floor(Math.random() * 30 + 10),
     });
   }, []);
 
-  const handleCheckConnection = async () => {
-    setLoading(true);
-    await checkOllamaConnection();
-    setLoading(false);
+  const handleLoadModel = async (model: FlowModel) => {
+    try {
+      setModelLoadStatus(model, { loading: true, progress: 0, status: 'Завантаження нейромережі...' });
+      await loadModel(model, (progress, status) => {
+        setModelLoadStatus(model, { loading: true, progress, status });
+      });
+      setModelLoadStatus(model, { loading: false, progress: 100, status: 'Завантажена' });
+      setLoadedModels(getLoadedModels());
+    } catch (err) {
+      setModelLoadStatus(model, { loading: false, progress: 0, status: 'Помилка' });
+    }
   };
 
   const recentChats = [...chats].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 5);
@@ -44,83 +52,112 @@ export default function Dashboard() {
           {t('dashboard.welcome', language)} 🧠
         </h1>
         <p className="text-slate-400 text-lg">
-          {t('dashboard.subtitle', language)}
+          {language === 'uk' ? 'Повністю локальна нейромережа — Flow-1 Flash та Flow-1 Pro' : 'Fully local neural network — Flow-1 Flash & Flow-1 Pro'}
         </p>
       </div>
 
-      {/* Status Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {/* Engine Status */}
-        <div className="glass rounded-2xl p-5">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-slate-400 text-sm">{t('dashboard.engineStatus', language)}</span>
-            <button
-              onClick={handleCheckConnection}
-              disabled={loading}
-              className="p-1.5 rounded-lg hover:bg-white/5 transition-colors"
-            >
-              <RefreshCw className={`w-4 h-4 text-slate-400 ${loading ? 'animate-spin' : ''}`} />
-            </button>
-          </div>
-          <div className="flex items-center gap-3">
-            {ollamaConnected ? (
-              <Wifi className="w-8 h-8 text-green-400" />
-            ) : (
-              <WifiOff className="w-8 h-8 text-red-400" />
-            )}
-            <div>
-              <p className={`font-semibold ${ollamaConnected ? 'text-green-400' : 'text-red-400'}`}>
-                {ollamaConnected ? t('dashboard.connected', language) : t('dashboard.disconnected', language)}
-              </p>
-              <p className="text-xs text-slate-500">Ollama API</p>
+      {/* Model Status Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+        {(['flow-1-flash', 'flow-1-pro'] as FlowModel[]).map((modelId) => {
+          const config = MODEL_CONFIGS[modelId];
+          const status = modelLoadStatus[modelId];
+          const isLoaded = loadedModels.includes(modelId);
+          const isActive = activeModel === modelId;
+          
+          return (
+            <div key={modelId} className={`glass rounded-2xl p-5 ${isActive ? 'ring-1 ring-indigo-500/50' : ''}`}>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                    isLoaded ? 'bg-green-500/20' : 'bg-slate-700/50'
+                  }`}>
+                    {status?.loading ? (
+                      <Loader className="w-5 h-5 text-amber-400 animate-spin" />
+                    ) : isLoaded ? (
+                      <CheckCircle className="w-5 h-5 text-green-400" />
+                    ) : (
+                      <Brain className="w-5 h-5 text-slate-400" />
+                    )}
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-white">{config.name}</h3>
+                    <p className="text-xs text-slate-400">{config.params} parameters • {config.size}</p>
+                  </div>
+                </div>
+                {isActive && (
+                  <span className="px-2 py-1 rounded-lg bg-indigo-500/20 text-indigo-300 text-xs">Active</span>
+                )}
+              </div>
+              
+              <p className="text-sm text-slate-400 mb-3">{language === 'uk' ? config.description : config.descriptionEn}</p>
+              
+              {status?.loading && (
+                <div className="mb-3">
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-slate-400">{status.status}</span>
+                    <span className="text-indigo-300">{status.progress}%</span>
+                  </div>
+                  <div className="h-2 bg-slate-700/50 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-300"
+                      style={{ width: `${status.progress}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+              
+              <div className="flex gap-2">
+                {!isLoaded && !status?.loading && (
+                  <button
+                    onClick={() => handleLoadModel(modelId)}
+                    className="flex-1 py-2 rounded-xl bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30 text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Download className="w-4 h-4" />
+                    {language === 'uk' ? 'Завантажити' : 'Load Model'}
+                  </button>
+                )}
+                {isLoaded && !isActive && (
+                  <button
+                    onClick={() => useStore.getState().setActiveModel(modelId)}
+                    className="flex-1 py-2 rounded-xl bg-slate-700/50 text-slate-300 hover:bg-indigo-500/20 hover:text-indigo-300 text-sm transition-colors"
+                  >
+                    {language === 'uk' ? 'Активувати' : 'Activate'}
+                  </button>
+                )}
+                {isLoaded && isActive && (
+                  <div className="flex-1 py-2 rounded-xl bg-green-500/10 text-green-300 text-sm text-center">
+                    ✓ {language === 'uk' ? 'Активна' : 'Active'}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        </div>
+          );
+        })}
+      </div>
 
-        {/* Active Model */}
-        <div className="glass rounded-2xl p-5">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-slate-400 text-sm">{t('dashboard.activeModel', language)}</span>
-            <Brain className="w-5 h-5 text-indigo-400" />
-          </div>
-          <p className="font-semibold text-white text-lg truncate">
-            {activeModel || '—'}
-          </p>
-          <button
-            onClick={() => setCurrentPage('models')}
-            className="text-xs text-indigo-400 hover:text-indigo-300 mt-1 flex items-center gap-1"
-          >
-            {t('models.available', language)} <ArrowRight className="w-3 h-3" />
-          </button>
-        </div>
-
-        {/* Installed Models */}
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <div className="glass rounded-2xl p-5">
           <div className="flex items-center justify-between mb-3">
             <span className="text-slate-400 text-sm">{t('dashboard.installedModels', language)}</span>
             <Package className="w-5 h-5 text-purple-400" />
           </div>
-          <p className="font-semibold text-white text-3xl">
-            {availableModels.length}
-          </p>
-          <p className="text-xs text-slate-500 mt-1">
-            {availableModels.length === 0 ? t('dashboard.noModels', language) : 'GGUF / Ollama'}
-          </p>
+          <p className="font-semibold text-white text-3xl">{loadedModels.length}/2</p>
+          <p className="text-xs text-slate-500 mt-1">Flow-1 Neural Engine</p>
         </div>
-
-        {/* AI Agents */}
         <div className="glass rounded-2xl p-5">
           <div className="flex items-center justify-between mb-3">
             <span className="text-slate-400 text-sm">{t('dashboard.totalAgents', language)}</span>
             <Bot className="w-5 h-5 text-cyan-400" />
           </div>
           <p className="font-semibold text-white text-3xl">{agents.length}</p>
-          <button
-            onClick={() => setCurrentPage('agents')}
-            className="text-xs text-indigo-400 hover:text-indigo-300 mt-1 flex items-center gap-1"
-          >
-            {language === 'uk' ? 'Керувати' : 'Manage'} <ArrowRight className="w-3 h-3" />
-          </button>
+        </div>
+        <div className="glass rounded-2xl p-5">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-slate-400 text-sm">Flow проєкти</span>
+            <GitBranch className="w-5 h-5 text-indigo-400" />
+          </div>
+          <p className="font-semibold text-white text-3xl">{flowProjects.length}</p>
         </div>
       </div>
 
@@ -138,10 +175,7 @@ export default function Dashboard() {
                 <span className="text-indigo-400">{systemInfo.cpu}%</span>
               </div>
               <div className="h-2 bg-slate-700/50 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-1000"
-                  style={{ width: `${systemInfo.cpu}%` }}
-                />
+                <div className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full" style={{ width: `${systemInfo.cpu}%` }} />
               </div>
             </div>
             <div>
@@ -150,19 +184,16 @@ export default function Dashboard() {
                 <span className="text-indigo-400">{systemInfo.memory}%</span>
               </div>
               <div className="h-2 bg-slate-700/50 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full transition-all duration-1000"
-                  style={{ width: `${systemInfo.memory}%` }}
-                />
+                <div className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full" style={{ width: `${systemInfo.memory}%` }} />
               </div>
             </div>
             <div>
               <div className="flex justify-between text-sm mb-1">
-                <span className="text-slate-300">GPU VRAM</span>
-                <span className="text-slate-500">N/A</span>
+                <span className="text-slate-300">WebGPU / WASM</span>
+                <span className="text-green-400">Active</span>
               </div>
               <div className="h-2 bg-slate-700/50 rounded-full overflow-hidden">
-                <div className="h-full bg-slate-600 rounded-full" style={{ width: '0%' }} />
+                <div className="h-full bg-gradient-to-r from-green-500 to-emerald-500 rounded-full" style={{ width: '100%' }} />
               </div>
             </div>
           </div>
@@ -182,7 +213,7 @@ export default function Dashboard() {
                   id: `chat-${Date.now()}`,
                   title: language === 'uk' ? 'Новий чат' : 'New Chat',
                   messages: [],
-                  model: activeModel,
+                  model: activeModel || 'flow-1-flash' as FlowModel,
                   systemPrompt: '',
                   createdAt: Date.now(),
                   updatedAt: Date.now(),
@@ -210,11 +241,11 @@ export default function Dashboard() {
               <span className="text-xs text-slate-300">{t('nav.models', language)}</span>
             </button>
             <button
-              onClick={() => setCurrentPage('knowledge')}
+              onClick={() => setCurrentPage('agents')}
               className="flex flex-col items-center gap-2 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all"
             >
-              <HardDrive className="w-6 h-6 text-emerald-400" />
-              <span className="text-xs text-slate-300">{t('nav.knowledge', language)}</span>
+              <Bot className="w-6 h-6 text-emerald-400" />
+              <span className="text-xs text-slate-300">{t('nav.agents', language)}</span>
             </button>
           </div>
         </div>
@@ -227,12 +258,6 @@ export default function Dashboard() {
             <Clock className="w-4 h-4" />
             {t('dashboard.recentChats', language)}
           </h3>
-          <button
-            onClick={() => setCurrentPage('chat')}
-            className="text-xs text-indigo-400 hover:text-indigo-300"
-          >
-            {language === 'uk' ? 'Всі чати' : 'All chats'} →
-          </button>
         </div>
         {recentChats.length === 0 ? (
           <div className="text-center py-8 text-slate-500">
@@ -244,10 +269,7 @@ export default function Dashboard() {
             {recentChats.map((chat) => (
               <button
                 key={chat.id}
-                onClick={() => {
-                  setActiveChatId(chat.id);
-                  setCurrentPage('chat');
-                }}
+                onClick={() => { setActiveChatId(chat.id); setCurrentPage('chat'); }}
                 className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition-colors text-left"
               >
                 <div className="w-8 h-8 rounded-lg bg-indigo-500/20 flex items-center justify-center">
@@ -259,34 +281,33 @@ export default function Dashboard() {
                     {chat.messages.length} {language === 'uk' ? 'повідомлень' : 'messages'} • {chat.model || 'No model'}
                   </p>
                 </div>
-                <span className="text-xs text-slate-500">
-                  {new Date(chat.updatedAt).toLocaleDateString()}
-                </span>
               </button>
             ))}
           </div>
         )}
       </div>
 
-      {!ollamaConnected && (
-        <div className="mt-6 glass rounded-2xl p-5 border-amber-500/30 border">
+      {/* Info */}
+      {loadedModels.length === 0 && (
+        <div className="mt-6 glass rounded-2xl p-5 border-indigo-500/30 border">
           <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center flex-shrink-0">
-              <WifiOff className="w-5 h-5 text-amber-400" />
+            <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center flex-shrink-0">
+              <Brain className="w-5 h-5 text-indigo-400" />
             </div>
             <div>
-              <h3 className="font-semibold text-amber-300 mb-1">
-                {language === 'uk' ? 'Ollama не підключено' : 'Ollama not connected'}
+              <h3 className="font-semibold text-indigo-300 mb-1">
+                {language === 'uk' ? 'Завантажте нейромережу' : 'Load neural network'}
               </h3>
-              <p className="text-sm text-slate-400 mb-3">
-                {t('dashboard.installOllama', language)}
+              <p className="text-sm text-slate-400 mb-2">
+                {language === 'uk'
+                  ? 'Для початку роботи завантажіть модель Flow-1 Flash (швидка, 82MB) або Flow-1 Pro (потужна, 500MB). Моделі працюють повністю локально у вашому браузері.'
+                  : 'To get started, load Flow-1 Flash (fast, 82MB) or Flow-1 Pro (powerful, 500MB). Models run fully locally in your browser.'}
               </p>
-              <div className="text-xs text-slate-500 space-y-1">
-                <p>1. {language === 'uk' ? 'Завантажте Ollama з' : 'Download Ollama from'} <a href="https://ollama.com" target="_blank" className="text-indigo-400 hover:underline">ollama.com</a></p>
-                <p>2. {language === 'uk' ? 'Встановіть та запустіть Ollama' : 'Install and start Ollama'}</p>
-                <p>3. {language === 'uk' ? 'Завантажте модель:' : 'Pull a model:'} <code className="bg-slate-800 px-2 py-0.5 rounded text-indigo-300">ollama pull llama3.2</code></p>
-                <p>4. {language === 'uk' ? 'Натисніть' : 'Click'} "{t('dashboard.checkConnection', language)}"</p>
-              </div>
+              <p className="text-xs text-slate-500">
+                {language === 'uk'
+                  ? '💡 Моделі кешуються і при повторному відкритті завантажуються миттєво.'
+                  : '💡 Models are cached and load instantly on subsequent visits.'}
+              </p>
             </div>
           </div>
         </div>

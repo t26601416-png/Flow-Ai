@@ -1,10 +1,11 @@
 import React from 'react';
 import { useStore } from '../store';
 import { t } from '../i18n';
+import { isModelLoaded, getLoadedModels } from '../services/neuralEngine';
 import {
   LayoutDashboard, MessageSquare, GitBranch, Bot, Package,
   BookOpen, FileText, Image, Mic, Zap, Server, Settings,
-  ChevronLeft, ChevronRight, Brain
+  ChevronLeft, ChevronRight, Brain, Cpu
 } from 'lucide-react';
 
 const navItems = [
@@ -23,8 +24,11 @@ const navItems = [
 ];
 
 export default function Sidebar() {
-  const { currentPage, setCurrentPage, language, ollamaConnected } = useStore();
+  const { currentPage, setCurrentPage, language, loadedModels, modelLoadStatus } = useStore();
   const [collapsed, setCollapsed] = React.useState(false);
+
+  const hasLoadedModels = loadedModels.length > 0;
+  const anyLoading = Object.values(modelLoadStatus).some(s => s.loading);
 
   return (
     <div className={`h-full flex flex-col transition-all duration-300 ${collapsed ? 'w-16' : 'w-64'} glass border-r border-indigo-500/20`}>
@@ -37,10 +41,22 @@ export default function Sidebar() {
           <div className="animate-fade-in">
             <h1 className="text-sm font-bold text-white">Local Flow AI</h1>
             <div className="flex items-center gap-1.5">
-              <div className={`w-1.5 h-1.5 rounded-full ${ollamaConnected ? 'bg-green-400' : 'bg-red-400'}`} />
-              <span className="text-[10px] text-slate-400">
-                {ollamaConnected ? t('dashboard.connected', language) : t('dashboard.disconnected', language)}
-              </span>
+              {anyLoading ? (
+                <>
+                  <Cpu className="w-3 h-3 text-amber-400 animate-pulse" />
+                  <span className="text-[10px] text-amber-400">Завантаження...</span>
+                </>
+              ) : hasLoadedModels ? (
+                <>
+                  <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                  <span className="text-[10px] text-green-400">Нейромережа активна</span>
+                </>
+              ) : (
+                <>
+                  <div className="w-1.5 h-1.5 rounded-full bg-slate-500" />
+                  <span className="text-[10px] text-slate-500">Моделі не завантажені</span>
+                </>
+              )}
             </div>
           </div>
         )}
@@ -70,6 +86,19 @@ export default function Sidebar() {
           );
         })}
       </nav>
+
+      {/* Loaded Models Indicator */}
+      {!collapsed && loadedModels.length > 0 && (
+        <div className="p-3 border-t border-indigo-500/20">
+          <div className="text-[10px] text-slate-500 uppercase mb-1">Активні моделі</div>
+          {loadedModels.map(m => (
+            <div key={m} className="flex items-center gap-1.5 text-xs text-indigo-300">
+              <div className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
+              {m === 'flow-1-flash' ? 'Flow-1 Flash' : 'Flow-1 Pro'}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Collapse button */}
       <div className="p-2 border-t border-indigo-500/20">

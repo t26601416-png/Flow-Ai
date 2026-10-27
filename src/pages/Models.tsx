@@ -1,267 +1,218 @@
 import React, { useState, useEffect } from 'react';
 import { useStore } from '../store';
 import { t } from '../i18n';
-import { listModels, pullModel, deleteModel, checkOllamaConnection } from '../services/ollama';
+import { MODEL_CONFIGS, loadModel, isModelLoaded, getLoadedModels, unloadModel } from '../services/neuralEngine';
+import type { FlowModel } from '../services/neuralEngine';
 import {
-  Package, Download, Trash2, Search, RefreshCw, Check,
-  AlertCircle, Cpu, HardDrive, Wifi, WifiOff
+  Package, Download, Trash2, Check, Brain, Cpu, HardDrive,
+  Zap, Loader, CheckCircle, AlertCircle
 } from 'lucide-react';
 
-const popularModels = [
-  { name: 'llama3.2', description: 'Meta Llama 3.2 — 3B parameters', size: '2.0 GB', params: '3B', category: 'General AI' },
-  { name: 'llama3.1:8b', description: 'Meta Llama 3.1 — 8B parameters', size: '4.7 GB', params: '8B', category: 'General AI' },
-  { name: 'mistral', description: 'Mistral 7B — High performance', size: '4.1 GB', params: '7B', category: 'General AI' },
-  { name: 'codellama', description: 'Code Llama — Code generation', size: '3.8 GB', params: '7B', category: 'Coding AI' },
-  { name: 'phi3', description: 'Microsoft Phi-3 — Small but powerful', size: '2.3 GB', params: '3.8B', category: 'Small Language Models' },
-  { name: 'gemma2', description: 'Google Gemma 2 — 9B parameters', size: '5.4 GB', params: '9B', category: 'General AI' },
-  { name: 'qwen2.5', description: 'Alibaba Qwen 2.5 — Multilingual', size: '4.4 GB', params: '7B', category: 'General AI' },
-  { name: 'nomic-embed-text', description: 'Embedding model for RAG', size: '274 MB', params: '137M', category: 'Embedding Models' },
-  { name: 'deepseek-coder-v2', description: 'DeepSeek Coder V2 — Advanced coding', size: '8.9 GB', params: '16B', category: 'Coding AI' },
-  { name: 'llava', description: 'LLaVA — Vision + Language', size: '4.7 GB', params: '7B', category: 'Vision AI' },
-  { name: 'mixtral', description: 'Mistral Mixtral 8x7B — MoE', size: '26 GB', params: '46.7B', category: 'Reasoning AI' },
-  { name: 'whisper', description: 'OpenAI Whisper — Speech recognition', size: '1.5 GB', params: '394M', category: 'Speech Models' },
-];
-
 export default function Models() {
-  const { language, ollamaConnected, availableModels, setAvailableModels, activeModel, setActiveModel } = useStore();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filterCategory, setFilterCategory] = useState('all');
-  const [downloadingModels, setDownloadingModels] = useState<Record<string, { progress: number; status: string }>>({});
-  const [tab, setTab] = useState<'installed' | 'available'>('installed');
+  const { language, loadedModels, setLoadedModels, activeModel, setActiveModel, modelLoadStatus, setModelLoadStatus } = useStore();
 
-  useEffect(() => {
-    if (ollamaConnected) {
-      listModels();
-    }
-  }, [ollamaConnected]);
-
-  const handleDownload = async (modelName: string) => {
-    setDownloadingModels(prev => ({ ...prev, [modelName]: { progress: 0, status: 'downloading' } }));
-    
-    await pullModel(modelName, (data) => {
-      if (data.status) {
-        setDownloadingModels(prev => ({
-          ...prev,
-          [modelName]: { progress: data.completed ? Math.round((data.completed / (data.total || 1)) * 100) : 0, status: data.status }
-        }));
-      }
-    });
-
-    setDownloadingModels(prev => {
-      const updated = { ...prev };
-      delete updated[modelName];
-      return updated;
-    });
-    
-    await listModels();
-  };
-
-  const handleDelete = async (modelName: string) => {
-    if (confirm(language === 'uk' ? `Видалити модель ${modelName}?` : `Delete model ${modelName}?`)) {
-      await deleteModel(modelName);
-      await listModels();
-      if (activeModel === modelName) setActiveModel('');
+  const handleLoad = async (model: FlowModel) => {
+    try {
+      setModelLoadStatus(model, { loading: true, progress: 0, status: 'Ініціалізація...' });
+      await loadModel(model, (progress, status) => {
+        setModelLoadStatus(model, { loading: true, progress, status });
+      });
+      setModelLoadStatus(model, { loading: false, progress: 100, status: 'Завантажена' });
+      setLoadedModels(getLoadedModels());
+    } catch (err) {
+      setModelLoadStatus(model, { loading: false, progress: 0, status: 'Помилка завантаження' });
     }
   };
 
-  const categories = ['all', 'General AI', 'Coding AI', 'Reasoning AI', 'Vision AI', 'Embedding Models', 'Speech Models', 'Small Language Models'];
+  const handleUnload = (model: FlowModel) => {
+    unloadModel(model);
+    setLoadedModels(getLoadedModels());
+    if (activeModel === model) setActiveModel('');
+  };
 
-  const filteredAvailable = popularModels.filter(m => {
-    const matchesSearch = m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      m.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = filterCategory === 'all' || m.category === filterCategory;
-    const isInstalled = availableModels.some(am => am.name === m.name || m.name.startsWith(am.name.split(':')[0]));
-    return matchesSearch && matchesCategory && !isInstalled;
-  });
+  const models = Object.entries(MODEL_CONFIGS) as [FlowModel, typeof MODEL_CONFIGS[FlowModel]][];
 
   return (
     <div className="h-full overflow-y-auto p-6 animate-fade-in">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-3">
-            <Package className="w-7 h-7 text-indigo-400" />
+            <Brain className="w-7 h-7 text-indigo-400" />
             {t('nav.models', language)}
           </h1>
           <p className="text-sm text-slate-400 mt-1">
-            {language === 'uk' ? 'Керування локальними AI моделями' : 'Manage local AI models'}
+            {language === 'uk' ? 'Локальні нейромережі Flow-1 — працюють повністю у вашому браузері' : 'Local Flow-1 neural networks — running fully in your browser'}
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${ollamaConnected ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
-            {ollamaConnected ? <Wifi className="w-4 h-4" /> : <WifiOff className="w-4 h-4" />}
-            <span className="text-xs">{ollamaConnected ? 'Ollama' : 'Offline'}</span>
+          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${loadedModels.length > 0 ? 'bg-green-500/10 text-green-400' : 'bg-slate-700/50 text-slate-400'}`}>
+            <Brain className="w-4 h-4" />
+            <span className="text-xs">{loadedModels.length}/2 {language === 'uk' ? 'завантажено' : 'loaded'}</span>
           </div>
-          <button
-            onClick={() => checkOllamaConnection()}
-            className="p-2 rounded-lg hover:bg-white/5 text-slate-400"
-          >
-            <RefreshCw className="w-4 h-4" />
-          </button>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-2 mb-6">
-        <button
-          onClick={() => setTab('installed')}
-          className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${tab === 'installed' ? 'bg-indigo-500/20 text-indigo-300' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
-        >
-          {t('models.installed', language)} ({availableModels.length})
-        </button>
-        <button
-          onClick={() => setTab('available')}
-          className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${tab === 'available' ? 'bg-indigo-500/20 text-indigo-300' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
-        >
-          {t('models.available', language)}
-        </button>
-      </div>
-
-      {/* Search & Filter */}
-      <div className="flex gap-3 mb-6">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-          <input
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={t('models.search', language)}
-            className="w-full pl-10 pr-4 py-2.5 bg-slate-800/50 border border-indigo-500/20 rounded-xl text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500/50"
-          />
+      {/* Architecture Info */}
+      <div className="glass rounded-2xl p-5 mb-6 border-indigo-500/20 border">
+        <div className="flex items-start gap-3">
+          <Brain className="w-5 h-5 text-indigo-400 mt-0.5" />
+          <div>
+            <h3 className="text-sm font-medium text-white mb-1">Flow-1 Neural Engine</h3>
+            <p className="text-xs text-slate-400">
+              {language === 'uk'
+                ? 'Моделі Flow-1 працюють на основі Transformer архітектури через WebAssembly/WebGPU. Після першого завантаження моделі кешуються в IndexedDB браузера і працюють повністю офлайн.'
+                : 'Flow-1 models use Transformer architecture via WebAssembly/WebGPU. After first download, models are cached in browser IndexedDB and work fully offline.'}
+            </p>
+          </div>
         </div>
-        <select
-          value={filterCategory}
-          onChange={(e) => setFilterCategory(e.target.value)}
-          className="bg-slate-800/50 border border-indigo-500/20 rounded-xl px-3 py-2.5 text-sm text-slate-300 focus:outline-none"
-        >
-          {categories.map(c => (
-            <option key={c} value={c}>{c === 'all' ? (language === 'uk' ? 'Всі категорії' : 'All categories') : c}</option>
-          ))}
-        </select>
       </div>
 
-      {/* Installed Models */}
-      {tab === 'installed' && (
-        <div className="space-y-3">
-          {availableModels.length === 0 ? (
-            <div className="glass rounded-2xl p-12 text-center">
-              <Package className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-slate-300 mb-2">
-                {t('dashboard.noModels', language)}
-              </h3>
-              <p className="text-sm text-slate-500 mb-4">
-                {language === 'uk'
-                  ? 'Перейдіть на вкладку "Доступні" щоб завантажити модель'
-                  : 'Go to "Available" tab to download a model'}
-              </p>
-              {!ollamaConnected && (
-                <p className="text-sm text-amber-400 flex items-center justify-center gap-2">
-                  <AlertCircle className="w-4 h-4" />
-                  {t('dashboard.installOllama', language)}
-                </p>
-              )}
-            </div>
-          ) : (
-            availableModels.map((model) => (
-              <div key={model.name} className="glass rounded-xl p-4 flex items-center justify-between">
+      {/* Model Cards */}
+      <div className="space-y-4">
+        {models.map(([modelId, config]) => {
+          const isLoaded = loadedModels.includes(modelId);
+          const isActive = activeModel === modelId;
+          const status = modelLoadStatus[modelId];
+          
+          return (
+            <div key={modelId} className={`glass rounded-2xl p-6 ${isActive ? 'ring-1 ring-indigo-500/50' : ''}`}>
+              <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-4">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${activeModel === model.name ? 'bg-indigo-500/20' : 'bg-slate-700/50'}`}>
-                    <Package className={`w-5 h-5 ${activeModel === model.name ? 'text-indigo-400' : 'text-slate-400'}`} />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-white">{model.name}</h3>
-                    <div className="flex items-center gap-3 text-xs text-slate-400 mt-1">
-                      {model.details?.parameter_size && (
-                        <span className="flex items-center gap-1"><Cpu className="w-3 h-3" />{model.details.parameter_size}</span>
-                      )}
-                      {model.size && (
-                        <span className="flex items-center gap-1"><HardDrive className="w-3 h-3" />{(model.size / 1e9).toFixed(1)} GB</span>
-                      )}
-                      {model.details?.quantization_level && (
-                        <span>{model.details.quantization_level}</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {activeModel === model.name ? (
-                    <span className="px-3 py-1.5 rounded-lg bg-indigo-500/20 text-indigo-300 text-xs flex items-center gap-1">
-                      <Check className="w-3 h-3" /> Active
-                    </span>
-                  ) : (
-                    <button
-                      onClick={() => setActiveModel(model.name)}
-                      className="px-3 py-1.5 rounded-lg bg-slate-700/50 text-slate-300 hover:bg-indigo-500/20 hover:text-indigo-300 text-xs transition-colors"
-                    >
-                      {language === 'uk' ? 'Обрати' : 'Select'}
-                    </button>
-                  )}
-                  <button
-                    onClick={() => handleDelete(model.name)}
-                    className="p-2 rounded-lg hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      )}
-
-      {/* Available Models */}
-      {tab === 'available' && (
-        <div className="space-y-3">
-          {filteredAvailable.map((model) => {
-            const isDownloading = downloadingModels[model.name];
-            return (
-              <div key={model.name} className="glass rounded-xl p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center">
-                      <Package className="w-5 h-5 text-indigo-400" />
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-medium text-white">{model.name}</h3>
-                      <p className="text-xs text-slate-400 mt-0.5">{model.description}</p>
-                      <div className="flex items-center gap-3 text-xs text-slate-500 mt-1">
-                        <span>{model.params} params</span>
-                        <span>{model.size}</span>
-                        <span className="px-1.5 py-0.5 rounded bg-slate-700/50 text-slate-400">{model.category}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div>
-                    {isDownloading ? (
-                      <div className="flex flex-col items-end gap-1">
-                        <span className="text-xs text-indigo-300">{isDownloading.status}</span>
-                        <div className="w-32 h-1.5 bg-slate-700 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-indigo-500 rounded-full transition-all duration-300"
-                            style={{ width: `${isDownloading.progress}%` }}
-                          />
-                        </div>
-                      </div>
+                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${
+                    isLoaded ? 'bg-gradient-to-br from-indigo-500/20 to-purple-500/20' : 'bg-slate-700/50'
+                  }`}>
+                    {status?.loading ? (
+                      <Loader className="w-7 h-7 text-amber-400 animate-spin" />
+                    ) : isLoaded ? (
+                      <CheckCircle className="w-7 h-7 text-green-400" />
                     ) : (
-                      <button
-                        onClick={() => handleDownload(model.name)}
-                        disabled={!ollamaConnected}
-                        className="px-4 py-2 rounded-xl bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30 text-xs font-medium transition-colors flex items-center gap-2 disabled:opacity-30"
-                      >
-                        <Download className="w-3.5 h-3.5" />
-                        {t('models.download', language)}
-                      </button>
+                      <Brain className="w-7 h-7 text-slate-400" />
                     )}
                   </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-white">{config.name}</h2>
+                    <p className="text-sm text-slate-400">{language === 'uk' ? config.description : config.descriptionEn}</p>
+                  </div>
+                </div>
+                {isActive && (
+                  <span className="px-3 py-1.5 rounded-xl bg-indigo-500/20 text-indigo-300 text-sm font-medium">
+                    ✓ Active
+                  </span>
+                )}
+              </div>
+
+              {/* Specs */}
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
+                <div className="bg-slate-800/30 rounded-xl p-3 text-center">
+                  <Cpu className="w-4 h-4 text-indigo-400 mx-auto mb-1" />
+                  <p className="text-xs text-slate-400">{language === 'uk' ? 'Параметри' : 'Parameters'}</p>
+                  <p className="text-sm font-medium text-white">{config.params}</p>
+                </div>
+                <div className="bg-slate-800/30 rounded-xl p-3 text-center">
+                  <HardDrive className="w-4 h-4 text-purple-400 mx-auto mb-1" />
+                  <p className="text-xs text-slate-400">{language === 'uk' ? 'Розмір' : 'Size'}</p>
+                  <p className="text-sm font-medium text-white">{config.size}</p>
+                </div>
+                <div className="bg-slate-800/30 rounded-xl p-3 text-center">
+                  <Zap className="w-4 h-4 text-amber-400 mx-auto mb-1" />
+                  <p className="text-xs text-slate-400">{language === 'uk' ? 'Швидкість' : 'Speed'}</p>
+                  <p className="text-sm font-medium text-white">{config.speed}</p>
+                </div>
+                <div className="bg-slate-800/30 rounded-xl p-3 text-center">
+                  <Brain className="w-4 h-4 text-cyan-400 mx-auto mb-1" />
+                  <p className="text-xs text-slate-400">{language === 'uk' ? 'Якість' : 'Quality'}</p>
+                  <p className="text-sm font-medium text-white">{config.quality}</p>
+                </div>
+                <div className="bg-slate-800/30 rounded-xl p-3 text-center">
+                  <Package className="w-4 h-4 text-emerald-400 mx-auto mb-1" />
+                  <p className="text-xs text-slate-400">{language === 'uk' ? 'Категорія' : 'Category'}</p>
+                  <p className="text-sm font-medium text-white">{config.category}</p>
                 </div>
               </div>
-            );
-          })}
-          {filteredAvailable.length === 0 && (
-            <div className="text-center py-8 text-slate-500">
-              <p>{language === 'uk' ? 'Моделі не знайдено' : 'No models found'}</p>
+
+              {/* Progress Bar */}
+              {status?.loading && (
+                <div className="mb-4">
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-slate-400">{status.status}</span>
+                    <span className="text-indigo-300">{status.progress}%</span>
+                  </div>
+                  <div className="h-3 bg-slate-700/50 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-300"
+                      style={{ width: `${status.progress}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex gap-3">
+                {!isLoaded && !status?.loading && (
+                  <button
+                    onClick={() => handleLoad(modelId)}
+                    className="flex-1 py-3 rounded-xl bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30 text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Download className="w-4 h-4" />
+                    {language === 'uk' ? 'Завантажити модель' : 'Load Model'}
+                  </button>
+                )}
+                {isLoaded && !isActive && (
+                  <>
+                    <button
+                      onClick={() => setActiveModel(modelId)}
+                      className="flex-1 py-3 rounded-xl bg-indigo-500 text-white hover:bg-indigo-600 text-sm font-medium transition-colors"
+                    >
+                      {language === 'uk' ? 'Активувати' : 'Activate'}
+                    </button>
+                    <button
+                      onClick={() => handleUnload(modelId)}
+                      className="px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 text-sm transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </>
+                )}
+                {isLoaded && isActive && (
+                  <div className="flex-1 py-3 rounded-xl bg-green-500/10 text-green-300 text-sm font-medium text-center">
+                    ✓ {language === 'uk' ? 'Активна модель' : 'Active Model'}
+                  </div>
+                )}
+                {status?.loading && (
+                  <button
+                    disabled
+                    className="flex-1 py-3 rounded-xl bg-amber-500/10 text-amber-300 text-sm font-medium flex items-center justify-center gap-2"
+                  >
+                    <Loader className="w-4 h-4 animate-spin" />
+                    {language === 'uk' ? 'Завантаження...' : 'Loading...'}
+                  </button>
+                )}
+              </div>
             </div>
-          )}
+          );
+        })}
+      </div>
+
+      {/* Technical Info */}
+      <div className="mt-6 glass rounded-2xl p-5">
+        <h3 className="text-sm font-medium text-white mb-3">
+          {language === 'uk' ? 'Технічна інформація' : 'Technical Information'}
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-slate-400">
+          <div>
+            <p className="mb-1">• <span className="text-slate-300">Runtime:</span> ONNX Runtime (WASM/WebGPU)</p>
+            <p className="mb-1">• <span className="text-slate-300">Architecture:</span> Transformer (GPT-2 family)</p>
+            <p className="mb-1">• <span className="text-slate-300">Cache:</span> IndexedDB (browser storage)</p>
+            <p>• <span className="text-slate-300">Privacy:</span> 100% local, no server calls</p>
+          </div>
+          <div>
+            <p className="mb-1">• <span className="text-slate-300">Tokenizer:</span> BPE (Byte Pair Encoding)</p>
+            <p className="mb-1">• <span className="text-slate-300">Context:</span> 1024 tokens</p>
+            <p className="mb-1">• <span className="text-slate-300">Quantization:</span> INT8 (optimized)</p>
+            <p>• <span className="text-slate-300">First load:</span> Downloads from CDN, then cached</p>
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

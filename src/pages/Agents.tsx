@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { useStore, AIAgent } from '../store';
+import { useStore, type AIAgent } from '../store';
 import { t } from '../i18n';
-import { chatStreamGenerator } from '../services/ollama';
+import { generateTextStream, isModelLoaded, loadModel, MODEL_CONFIGS } from '../services/neuralEngine';
+import type { FlowModel } from '../services/neuralEngine';
 import {
-  Bot, Plus, Trash2, Edit3, MessageSquare, X, Check,
-  Wrench, Brain, Play
+  Bot, Plus, Trash2, Edit3, MessageSquare, X, Wrench, Brain, Play, Loader
 } from 'lucide-react';
 
 const defaultIcons = ['💻', '🌐', '📊', '🎨', '📝', '🔬', '🎯', '⚡', '🧠', '🤖'];
@@ -15,14 +15,12 @@ const availableTools = [
   { id: 'translation', name: { uk: 'Переклад', en: 'Translation' } },
   { id: 'analysis', name: { uk: 'Аналіз', en: 'Analysis' } },
   { id: 'summarization', name: { uk: 'Сумаризація', en: 'Summarization' } },
-  { id: 'web_search', name: { uk: 'Веб-пошук', en: 'Web Search' } },
-  { id: 'file_ops', name: { uk: 'Робота з файлами', en: 'File Operations' } },
   { id: 'math', name: { uk: 'Математика', en: 'Math' } },
   { id: 'reasoning', name: { uk: 'Міркування', en: 'Reasoning' } },
 ];
 
 export default function Agents() {
-  const { language, agents, addAgent, updateAgent, deleteAgent, activeModel, availableModels, ollamaConnected } = useStore();
+  const { language, agents, addAgent, updateAgent, deleteAgent, activeModel, loadedModels, setLoadedModels, modelLoadStatus, setModelLoadStatus } = useStore();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingAgent, setEditingAgent] = useState<AIAgent | null>(null);
   const [chatAgent, setChatAgent] = useState<AIAgent | null>(null);
@@ -31,12 +29,11 @@ export default function Agents() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [agentResponse, setAgentResponse] = useState('');
 
-  // Form state
   const [formName, setFormName] = useState('');
   const [formIcon, setFormIcon] = useState('🤖');
   const [formDescription, setFormDescription] = useState('');
   const [formSystemPrompt, setFormSystemPrompt] = useState('');
-  const [formModel, setFormModel] = useState('');
+  const [formModel, setFormModel] = useState<FlowModel | ''>('');
   const [formTools, setFormTools] = useState<string[]>([]);
 
   const resetForm = () => {
@@ -44,37 +41,25 @@ export default function Agents() {
     setFormIcon('🤖');
     setFormDescription('');
     setFormSystemPrompt('');
-    setFormModel(activeModel);
+    setFormModel('');
     setFormTools([]);
     setEditingAgent(null);
   };
 
   const handleCreate = () => {
     if (!formName.trim()) return;
-    
     if (editingAgent) {
       updateAgent(editingAgent.id, {
-        name: formName,
-        icon: formIcon,
-        description: formDescription,
-        systemPrompt: formSystemPrompt,
-        model: formModel,
-        tools: formTools,
+        name: formName, icon: formIcon, description: formDescription,
+        systemPrompt: formSystemPrompt, model: formModel, tools: formTools,
       });
     } else {
-      const newAgent: AIAgent = {
-        id: `agent-${Date.now()}`,
-        name: formName,
-        icon: formIcon,
-        description: formDescription,
-        systemPrompt: formSystemPrompt,
-        model: formModel,
-        tools: formTools,
-        createdAt: Date.now(),
-      };
-      addAgent(newAgent);
+      addAgent({
+        id: `agent-${Date.now()}`, name: formName, icon: formIcon,
+        description: formDescription, systemPrompt: formSystemPrompt,
+        model: formModel, tools: formTools, createdAt: Date.now(),
+      });
     }
-    
     setShowCreateModal(false);
     resetForm();
   };
@@ -93,6 +78,7 @@ export default function Agents() {
   const handleAgentChat = async () => {
     if (!chatInput.trim() || !chatAgent || isGenerating) return;
     
+    const model = (chatAgent.model || activeModel || 'flow-1-flash') as FlowModel;
     const userMsg = { role: 'user', content: chatInput };
     setChatMessages(prev => [...prev, userMsg]);
     setChatInput('');
@@ -100,18 +86,27 @@ export default function Agents() {
     setAgentResponse('');
 
     try {
-      const messages = [...chatMessages, userMsg];
-      let fullResponse = '';
-      
-      const generator = chatStreamGenerator(messages, {
-        model: chatAgent.model || activeModel,
-        system: chatAgent.systemPrompt,
-      });
-
-      for await (const chunk of generator) {
-        fullResponse += chunk;
-        setAgentResponse(fullResponse);
+      if (!isModelLoaded(model)) {
+        await loadModel(model, (progress, status) => {
+          setModelLoadStatus(model, { loading: true, progress, status });
+        });
+        setLoadedModels([...new Set([...loadedModels, model])]);
       }
+
+      let prompt = '';
+      if (chatAgent.systemPrompt) prompt += chatAgent.systemPrompt + '\n\n';
+      for (const msg of [...chatMessages, userMsg]) {
+        prompt += `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}\n`;
+      }
+      prompt += 'Assistant:';
+
+      let fullResponse = '';
+      await generateTextStream(model, prompt, {
+        onToken: (token) => {
+          fullResponse += token;
+          setAgentResponse(fullResponse);
+        },
+      });
       
       setChatMessages(prev => [...prev, { role: 'assistant', content: fullResponse }]);
       setAgentResponse('');
@@ -131,7 +126,7 @@ export default function Agents() {
             {t('nav.agents', language)}
           </h1>
           <p className="text-sm text-slate-400 mt-1">
-            {language === 'uk' ? 'Створюйте та керуйте AI-агентами' : 'Create and manage AI agents'}
+            {language === 'uk' ? 'Створюйте та керуйте AI-агентами на базі Flow-1' : 'Create and manage AI agents powered by Flow-1'}
           </p>
         </div>
         <button
@@ -143,7 +138,6 @@ export default function Agents() {
         </button>
       </div>
 
-      {/* Agents Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {agents.map((agent) => (
           <div key={agent.id} className="glass rounded-2xl p-5 hover:border-indigo-500/30 transition-all group">
@@ -152,20 +146,14 @@ export default function Agents() {
                 <span className="text-3xl">{agent.icon}</span>
                 <div>
                   <h3 className="font-medium text-white">{agent.name}</h3>
-                  <p className="text-xs text-slate-400">{agent.model || activeModel || 'Default'}</p>
+                  <p className="text-xs text-slate-400">{MODEL_CONFIGS[(agent.model || 'flow-1-flash') as FlowModel]?.name || 'Flow-1 Flash'}</p>
                 </div>
               </div>
               <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button
-                  onClick={() => handleEdit(agent)}
-                  className="p-1.5 rounded-lg hover:bg-white/5 text-slate-400"
-                >
+                <button onClick={() => handleEdit(agent)} className="p-1.5 rounded-lg hover:bg-white/5 text-slate-400">
                   <Edit3 className="w-3.5 h-3.5" />
                 </button>
-                <button
-                  onClick={() => deleteAgent(agent.id)}
-                  className="p-1.5 rounded-lg hover:bg-red-500/20 text-slate-400 hover:text-red-400"
-                >
+                <button onClick={() => deleteAgent(agent.id)} className="p-1.5 rounded-lg hover:bg-red-500/20 text-slate-400 hover:text-red-400">
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
               </div>
@@ -173,14 +161,10 @@ export default function Agents() {
             <p className="text-sm text-slate-400 mb-3 line-clamp-2">{agent.description}</p>
             <div className="flex flex-wrap gap-1 mb-3">
               {agent.tools.slice(0, 3).map(tool => (
-                <span key={tool} className="px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-300 text-[10px]">
-                  {tool}
-                </span>
+                <span key={tool} className="px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-300 text-[10px]">{tool}</span>
               ))}
               {agent.tools.length > 3 && (
-                <span className="px-2 py-0.5 rounded-md bg-slate-700/50 text-slate-400 text-[10px]">
-                  +{agent.tools.length - 3}
-                </span>
+                <span className="px-2 py-0.5 rounded-md bg-slate-700/50 text-slate-400 text-[10px]">+{agent.tools.length - 3}</span>
               )}
             </div>
             <button
@@ -206,10 +190,7 @@ export default function Agents() {
                   <p className="text-xs text-slate-400">{chatAgent.description}</p>
                 </div>
               </div>
-              <button
-                onClick={() => setChatAgent(null)}
-                className="p-2 rounded-lg hover:bg-white/5 text-slate-400"
-              >
+              <button onClick={() => setChatAgent(null)} className="p-2 rounded-lg hover:bg-white/5 text-slate-400">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -218,16 +199,13 @@ export default function Agents() {
                 <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                   <div className={`max-w-[80%] rounded-xl px-4 py-2.5 text-sm ${
                     msg.role === 'user' ? 'bg-indigo-500/20 text-white' : 'bg-slate-800/50 text-slate-200'
-                  }`}>
-                    {msg.content}
-                  </div>
+                  }`}>{msg.content}</div>
                 </div>
               ))}
               {agentResponse && (
                 <div className="flex justify-start">
                   <div className="max-w-[80%] rounded-xl px-4 py-2.5 text-sm bg-slate-800/50 text-slate-200">
-                    {agentResponse}
-                    {isGenerating && <span className="animate-pulse">▊</span>}
+                    {agentResponse}{isGenerating && <span className="animate-pulse">▊</span>}
                   </div>
                 </div>
               )}
@@ -246,7 +224,7 @@ export default function Agents() {
                   disabled={!chatInput.trim() || isGenerating}
                   className="px-4 py-2.5 rounded-xl bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30 transition-colors disabled:opacity-30"
                 >
-                  <MessageSquare className="w-5 h-5" />
+                  {isGenerating ? <Loader className="w-5 h-5 animate-spin" /> : <MessageSquare className="w-5 h-5" />}
                 </button>
               </div>
             </div>
@@ -266,107 +244,64 @@ export default function Agents() {
                 <X className="w-5 h-5" />
               </button>
             </div>
-
             <div className="space-y-4">
-              {/* Icon */}
               <div>
                 <label className="text-xs text-slate-400 mb-2 block">{language === 'uk' ? 'Іконка' : 'Icon'}</label>
                 <div className="flex gap-2 flex-wrap">
                   {defaultIcons.map(icon => (
-                    <button
-                      key={icon}
-                      onClick={() => setFormIcon(icon)}
-                      className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl transition-all ${formIcon === icon ? 'bg-indigo-500/30 ring-2 ring-indigo-500' : 'bg-slate-800/50 hover:bg-slate-700/50'}`}
-                    >
+                    <button key={icon} onClick={() => setFormIcon(icon)}
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl transition-all ${formIcon === icon ? 'bg-indigo-500/30 ring-2 ring-indigo-500' : 'bg-slate-800/50 hover:bg-slate-700/50'}`}>
                       {icon}
                     </button>
                   ))}
                 </div>
               </div>
-
-              {/* Name */}
               <div>
                 <label className="text-xs text-slate-400 mb-1 block">{t('agents.name', language)}</label>
-                <input
-                  value={formName}
-                  onChange={(e) => setFormName(e.target.value)}
-                  className="w-full bg-slate-800/50 border border-indigo-500/20 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500/50"
-                />
+                <input value={formName} onChange={(e) => setFormName(e.target.value)}
+                  className="w-full bg-slate-800/50 border border-indigo-500/20 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500/50" />
               </div>
-
-              {/* Description */}
               <div>
                 <label className="text-xs text-slate-400 mb-1 block">{t('agents.description', language)}</label>
-                <input
-                  value={formDescription}
-                  onChange={(e) => setFormDescription(e.target.value)}
-                  className="w-full bg-slate-800/50 border border-indigo-500/20 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500/50"
-                />
+                <input value={formDescription} onChange={(e) => setFormDescription(e.target.value)}
+                  className="w-full bg-slate-800/50 border border-indigo-500/20 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500/50" />
               </div>
-
-              {/* System Prompt */}
               <div>
                 <label className="text-xs text-slate-400 mb-1 block">{t('agents.systemPrompt', language)}</label>
-                <textarea
-                  value={formSystemPrompt}
-                  onChange={(e) => setFormSystemPrompt(e.target.value)}
-                  rows={4}
-                  className="w-full bg-slate-800/50 border border-indigo-500/20 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500/50 resize-none"
-                />
+                <textarea value={formSystemPrompt} onChange={(e) => setFormSystemPrompt(e.target.value)} rows={4}
+                  className="w-full bg-slate-800/50 border border-indigo-500/20 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500/50 resize-none" />
               </div>
-
-              {/* Model */}
               <div>
                 <label className="text-xs text-slate-400 mb-1 block">{language === 'uk' ? 'Модель' : 'Model'}</label>
-                <select
-                  value={formModel}
-                  onChange={(e) => setFormModel(e.target.value)}
-                  className="w-full bg-slate-800/50 border border-indigo-500/20 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none"
-                >
-                  <option value="">{language === 'uk' ? 'За замовчуванням' : 'Default'}</option>
-                  {availableModels.map(m => (
-                    <option key={m.name} value={m.name}>{m.name}</option>
-                  ))}
+                <select value={formModel} onChange={(e) => setFormModel(e.target.value as FlowModel | '')}
+                  className="w-full bg-slate-800/50 border border-indigo-500/20 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none">
+                  <option value="">Flow-1 Flash (default)</option>
+                  <option value="flow-1-flash">Flow-1 Flash ⚡</option>
+                  <option value="flow-1-pro">Flow-1 Pro 🧠</option>
                 </select>
               </div>
-
-              {/* Tools */}
               <div>
                 <label className="text-xs text-slate-400 mb-2 block flex items-center gap-1">
                   <Wrench className="w-3 h-3" /> {t('agents.tools', language)}
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {availableTools.map(tool => (
-                    <button
-                      key={tool.id}
-                      onClick={() => setFormTools(prev =>
-                        prev.includes(tool.id) ? prev.filter(t => t !== tool.id) : [...prev, tool.id]
-                      )}
-                      className={`px-3 py-1.5 rounded-lg text-xs transition-colors ${
-                        formTools.includes(tool.id)
-                          ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
-                          : 'bg-slate-800/50 text-slate-400 hover:text-white border border-transparent'
-                      }`}
-                    >
-                      {tool.name[language]}
-                    </button>
+                    <button key={tool.id} onClick={() => setFormTools(prev =>
+                      prev.includes(tool.id) ? prev.filter(t => t !== tool.id) : [...prev, tool.id]
+                    )} className={`px-3 py-1.5 rounded-lg text-xs transition-colors ${
+                      formTools.includes(tool.id) ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30' : 'bg-slate-800/50 text-slate-400 hover:text-white border border-transparent'
+                    }`}>{tool.name[language]}</button>
                   ))}
                 </div>
               </div>
             </div>
-
             <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => { setShowCreateModal(false); resetForm(); }}
-                className="flex-1 py-2.5 rounded-xl border border-slate-600 text-slate-300 hover:bg-white/5 text-sm transition-colors"
-              >
+              <button onClick={() => { setShowCreateModal(false); resetForm(); }}
+                className="flex-1 py-2.5 rounded-xl border border-slate-600 text-slate-300 hover:bg-white/5 text-sm transition-colors">
                 {t('common.cancel', language)}
               </button>
-              <button
-                onClick={handleCreate}
-                disabled={!formName.trim()}
-                className="flex-1 py-2.5 rounded-xl bg-indigo-500 text-white hover:bg-indigo-600 text-sm font-medium transition-colors disabled:opacity-30"
-              >
+              <button onClick={handleCreate} disabled={!formName.trim()}
+                className="flex-1 py-2.5 rounded-xl bg-indigo-500 text-white hover:bg-indigo-600 text-sm font-medium transition-colors disabled:opacity-30">
                 {editingAgent ? (language === 'uk' ? 'Оновити' : 'Update') : (language === 'uk' ? 'Створити' : 'Create')}
               </button>
             </div>

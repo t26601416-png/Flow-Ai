@@ -1,6 +1,5 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useStore } from './store';
-import { checkOllamaConnection } from './services/ollama';
 import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
 import Chat from './pages/Chat';
@@ -17,19 +16,7 @@ import Documents from './pages/Documents';
 import { Toaster } from 'react-hot-toast';
 
 function App() {
-  const { currentPage, theme, ollamaUrl } = useStore();
-
-  useEffect(() => {
-    // Check Ollama connection on mount
-    checkOllamaConnection();
-    
-    // Periodic check every 30 seconds
-    const interval = setInterval(() => {
-      checkOllamaConnection();
-    }, 30000);
-    
-    return () => clearInterval(interval);
-  }, [ollamaUrl]);
+  const { currentPage, theme } = useStore();
 
   const renderPage = () => {
     switch (currentPage) {

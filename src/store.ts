@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import type { FlowModel } from './services/neuralEngine';
 
 // Types
 export interface ChatMessage {
@@ -14,7 +15,7 @@ export interface Chat {
   id: string;
   title: string;
   messages: ChatMessage[];
-  model: string;
+  model: FlowModel | '';
   systemPrompt: string;
   createdAt: number;
   updatedAt: number;
@@ -26,7 +27,7 @@ export interface AIAgent {
   icon: string;
   description: string;
   systemPrompt: string;
-  model: string;
+  model: FlowModel | '';
   tools: string[];
   createdAt: number;
 }
@@ -50,16 +51,12 @@ export interface KnowledgeDoc {
   indexedAt: number;
 }
 
-export interface ModelInfo {
-  name: string;
-  size: number;
-  digest: string;
-  details?: {
-    format: string;
-    family: string;
-    parameter_size: string;
-    quantization_level: string;
-  };
+export interface ModelLoadStatus {
+  model: FlowModel;
+  loaded: boolean;
+  loading: boolean;
+  progress: number;
+  status: string;
 }
 
 export interface AutomationTask {
@@ -85,15 +82,13 @@ interface AppState {
   language: 'uk' | 'en';
   setLanguage: (lang: 'uk' | 'en') => void;
   
-  // AI Engine
-  ollamaUrl: string;
-  setOllamaUrl: (url: string) => void;
-  ollamaConnected: boolean;
-  setOllamaConnected: (connected: boolean) => void;
-  availableModels: ModelInfo[];
-  setAvailableModels: (models: ModelInfo[]) => void;
-  activeModel: string;
-  setActiveModel: (model: string) => void;
+  // Neural Engine
+  activeModel: FlowModel | '';
+  setActiveModel: (model: FlowModel | '') => void;
+  loadedModels: FlowModel[];
+  setLoadedModels: (models: FlowModel[]) => void;
+  modelLoadStatus: Record<FlowModel, { loading: boolean; progress: number; status: string }>;
+  setModelLoadStatus: (model: FlowModel, status: { loading: boolean; progress: number; status: string }) => void;
   
   // AI Settings
   temperature: number;
@@ -104,8 +99,8 @@ interface AppState {
   setTopK: (t: number) => void;
   maxTokens: number;
   setMaxTokens: (t: number) => void;
-  contextLength: number;
-  setContextLength: (c: number) => void;
+  repetitionPenalty: number;
+  setRepetitionPenalty: (r: number) => void;
   
   // Chats
   chats: Chat[];
@@ -164,27 +159,30 @@ export const useStore = create<AppState>()(
       language: 'uk',
       setLanguage: (language) => set({ language }),
       
-      // AI Engine
-      ollamaUrl: 'http://localhost:11434',
-      setOllamaUrl: (url) => set({ ollamaUrl: url }),
-      ollamaConnected: false,
-      setOllamaConnected: (connected) => set({ ollamaConnected: connected }),
-      availableModels: [],
-      setAvailableModels: (models) => set({ availableModels: models }),
+      // Neural Engine
       activeModel: '',
       setActiveModel: (model) => set({ activeModel: model }),
+      loadedModels: [],
+      setLoadedModels: (models) => set({ loadedModels: models }),
+      modelLoadStatus: {
+        'flow-1-flash': { loading: false, progress: 0, status: '' },
+        'flow-1-pro': { loading: false, progress: 0, status: '' },
+      },
+      setModelLoadStatus: (model, status) => set((s) => ({
+        modelLoadStatus: { ...s.modelLoadStatus, [model]: status }
+      })),
       
       // AI Settings
       temperature: 0.7,
       setTemperature: (t) => set({ temperature: t }),
       topP: 0.9,
       setTopP: (t) => set({ topP: t }),
-      topK: 40,
+      topK: 50,
       setTopK: (t) => set({ topK: t }),
-      maxTokens: 2048,
+      maxTokens: 256,
       setMaxTokens: (t) => set({ maxTokens: t }),
-      contextLength: 4096,
-      setContextLength: (c) => set({ contextLength: c }),
+      repetitionPenalty: 1.2,
+      setRepetitionPenalty: (r) => set({ repetitionPenalty: r }),
       
       // Chats
       chats: [],
@@ -213,7 +211,7 @@ export const useStore = create<AppState>()(
           name: 'Програміст',
           icon: '💻',
           description: 'AI-асистент для написання та аналізу коду',
-          systemPrompt: 'Ти — досвідчений програміст. Допоможи користувачу з написанням коду, дебагом та архітектурними рішеннями. Відповідай структуровано з прикладами коду.',
+          systemPrompt: 'Ти — досвідчений програміст. Допоможи користувачу з написанням коду.',
           model: '',
           tools: ['code_generation', 'code_review', 'debug'],
           createdAt: Date.now()
@@ -223,7 +221,7 @@ export const useStore = create<AppState>()(
           name: 'Перекладач',
           icon: '🌐',
           description: 'Професійний перекладач між українською та англійською',
-          systemPrompt: 'Ти — професійний перекладач. Перекладай тексти між українською та англійською мовами, зберігаючи стиль та контекст оригіналу.',
+          systemPrompt: 'Ти — професійний перекладач. Перекладай тексти між українською та англійською мовами.',
           model: '',
           tools: ['translation'],
           createdAt: Date.now()
@@ -233,7 +231,7 @@ export const useStore = create<AppState>()(
           name: 'Аналітик',
           icon: '📊',
           description: 'Аналіз даних та документів',
-          systemPrompt: 'Ти — аналітик даних. Аналізуй надану інформацію, знаходь закономірності, роби висновки та рекомендації.',
+          systemPrompt: 'Ти — аналітик даних. Аналізуй надану інформацію та роби висновки.',
           model: '',
           tools: ['analysis', 'summarization'],
           createdAt: Date.now()
@@ -280,13 +278,12 @@ export const useStore = create<AppState>()(
       partialize: (state) => ({
         theme: state.theme,
         language: state.language,
-        ollamaUrl: state.ollamaUrl,
         activeModel: state.activeModel,
         temperature: state.temperature,
         topP: state.topP,
         topK: state.topK,
         maxTokens: state.maxTokens,
-        contextLength: state.contextLength,
+        repetitionPenalty: state.repetitionPenalty,
         chats: state.chats,
         agents: state.agents,
         flowProjects: state.flowProjects,
