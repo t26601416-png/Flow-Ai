@@ -57,7 +57,7 @@ export default function Dashboard() {
       </div>
 
       {/* Model Status Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         {(['flow-1-flash', 'flow-1-pro'] as FlowModel[]).map((modelId) => {
           const config = MODEL_CONFIGS[modelId];
           const status = modelLoadStatus[modelId];
@@ -133,6 +133,31 @@ export default function Dashboard() {
             </div>
           );
         })}
+
+        {/* Flow-image 1 Card */}
+        <div className="glass rounded-2xl p-5 ring-1 ring-pink-500/30">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500/20 to-purple-500/20 flex items-center justify-center">
+                <CheckCircle className="w-5 h-5 text-green-400" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-white">Flow-image 1</h3>
+                <p className="text-xs text-slate-400">Image Generation • 15 MB</p>
+              </div>
+            </div>
+            <span className="px-2 py-1 rounded-lg bg-green-500/20 text-green-300 text-xs">Ready</span>
+          </div>
+          <p className="text-sm text-slate-400 mb-3">
+            {language === 'uk' ? 'Генерація зображень з 5 стилями' : 'Image generation with 5 styles'}
+          </p>
+          <button
+            onClick={() => setCurrentPage('imageAI')}
+            className="w-full py-2 rounded-xl bg-pink-500/20 text-pink-300 hover:bg-pink-500/30 text-sm font-medium transition-colors"
+          >
+            {language === 'uk' ? 'Відкрити генератор' : 'Open Generator'}
+          </button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -142,8 +167,8 @@ export default function Dashboard() {
             <span className="text-slate-400 text-sm">{t('dashboard.installedModels', language)}</span>
             <Package className="w-5 h-5 text-purple-400" />
           </div>
-          <p className="font-semibold text-white text-3xl">{loadedModels.length}/2</p>
-          <p className="text-xs text-slate-500 mt-1">Flow-1 Neural Engine</p>
+          <p className="font-semibold text-white text-3xl">{loadedModels.length + 1}/3</p>
+          <p className="text-xs text-slate-500 mt-1">Flow Neural Engine</p>
         </div>
         <div className="glass rounded-2xl p-5">
           <div className="flex items-center justify-between mb-3">
