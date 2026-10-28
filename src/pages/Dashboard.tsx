@@ -192,7 +192,7 @@ export default function Dashboard() {
             <span className="text-slate-400 text-sm">{t('dashboard.installedModels', language)}</span>
             <Package className="w-5 h-5 text-purple-400" />
           </div>
-          <p className="font-semibold text-white text-3xl">{loadedModels.length + 4}/6</p>
+          <p className="font-semibold text-white text-3xl">{loadedModels.length + 4}/7</p>
           <p className="text-xs text-slate-500 mt-1">Flow Neural Engine</p>
         </div>
         <div className="glass rounded-2xl p-5">

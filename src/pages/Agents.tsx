@@ -278,6 +278,7 @@ export default function Agents() {
                   <option value="">Flow-1 Flash (default)</option>
                   <option value="flow-1-flash">Flow-1 Flash ⚡</option>
                   <option value="flow-1-pro">Flow-1 Pro 🧠</option>
+                  <option value="flow-argon-2">Flow-argon 2 🔥</option>
                 </select>
               </div>
               <div>

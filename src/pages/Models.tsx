@@ -54,7 +54,7 @@ export default function Models() {
         <div className="flex items-center gap-3">
           <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${loadedModels.length > 0 ? 'bg-green-500/10 text-green-400' : 'bg-slate-700/50 text-slate-400'}`}>
             <Brain className="w-4 h-4" />
-            <span className="text-xs">{loadedModels.length + 4}/6 {language === 'uk' ? 'доступно' : 'available'}</span>
+            <span className="text-xs">{loadedModels.length + 4}/7 {language === 'uk' ? 'доступно' : 'available'}</span>
           </div>
         </div>
       </div>

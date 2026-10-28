@@ -7,7 +7,7 @@ if (env.backends?.onnx?.wasm) {
   (env.backends.onnx.wasm as any).numThreads = 4;
 }
 
-export type FlowModel = 'flow-1-flash' | 'flow-1-pro';
+export type FlowModel = 'flow-1-flash' | 'flow-1-pro' | 'flow-argon-2';
 
 interface ModelConfig {
   id: string;
@@ -49,6 +49,19 @@ export const MODEL_CONFIGS: Record<FlowModel, ModelConfig> = {
     quality: 'Відмінна',
     category: 'General AI',
     maxTokens: 512,
+  },
+  'flow-argon-2': {
+    id: 'flow-argon-2',
+    hfModel: 'Xenova/gpt2-large',
+    name: 'Flow-argon 2',
+    description: 'Найпотужніша нейромережа з 320+ млн параметрів. Найкраща якість для складних завдань.',
+    descriptionEn: 'Most powerful neural network with 320+ million parameters. Best quality for complex tasks.',
+    size: '~1.5 GB',
+    params: '320M+',
+    speed: 'Повільна',
+    quality: 'Найкраща',
+    category: 'Advanced AI',
+    maxTokens: 1024,
   },
 };
 

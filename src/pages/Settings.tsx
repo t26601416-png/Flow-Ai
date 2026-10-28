@@ -105,6 +105,7 @@ export default function Settings() {
                   className="w-full bg-slate-800/50 border border-indigo-500/20 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none">
                   <option value="flow-1-flash">Flow-1 Flash ⚡</option>
                   <option value="flow-1-pro">Flow-1 Pro 🧠</option>
+                  <option value="flow-argon-2">Flow-argon 2 🔥</option>
                 </select>
               </div>
             </div>
