@@ -375,8 +375,8 @@ export default function Dashboard() {
               </h3>
               <p className="text-sm text-slate-400 mb-2">
                 {language === 'uk'
-                  ? 'Для початку роботи завантажіть модель Flow-1 Flash (швидка, 82MB) або Flow-1 Pro (потужна, 500MB). Моделі працюють повністю локально у вашому браузері.'
-                  : 'To get started, load Flow-1 Flash (fast, 82MB) or Flow-1 Pro (powerful, 500MB). Models run fully locally in your browser.'}
+                  ? 'Для початку роботи завантажіть модель Flow-1 Flash (швидка, 82MB) або Flow-1 Pro (потужна, 121MB). Моделі працюють повністю локально у вашому браузері.'
+                  : 'To get started, load Flow-1 Flash (fast, 82MB) or Flow-1 Pro (powerful, 121MB). Models run fully locally in your browser.'}
               </p>
               <p className="text-xs text-slate-500">
                 {language === 'uk'
