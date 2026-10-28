@@ -59,6 +59,10 @@ export default function ImageAI() {
         });
       }
 
+      if (!dataUrl) {
+        throw new Error('Failed to generate image');
+      }
+
       const newImage: GeneratedImage = {
         id: `img-${Date.now()}`,
         prompt: prompt.trim(),
@@ -72,6 +76,7 @@ export default function ImageAI() {
       setHistory(prev => [newImage, ...prev]);
     } catch (err) {
       console.error('Generation failed:', err);
+      alert(`Помилка генерації: ${err instanceof Error ? err.message : 'Невідома помилка'}`);
     } finally {
       setIsGenerating(false);
       setProgress(0);

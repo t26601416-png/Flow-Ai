@@ -1,5 +1,3 @@
-import type { FlowModel } from './neuralEngine';
-
 // Image generation engine using procedural algorithms + Canvas API
 // Generates unique images based on prompt hash
 
@@ -168,6 +166,11 @@ export async function generateImage(
     onProgress,
   } = options;
 
+  // Check if canvas is supported
+  if (typeof document === 'undefined') {
+    throw new Error('Canvas is not supported in this environment');
+  }
+  
   const seed = hashString(prompt + style);
   const rng = new SeededRandom(seed);
   const noise = createNoise(rng);
@@ -189,10 +192,13 @@ export async function generateImage(
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
-  const ctx = canvas.getContext('2d')!;
+  const ctx = canvas.getContext('2d');
+  
+  if (!ctx) {
+    throw new Error('Failed to get canvas 2D context');
+  }
 
   onProgress?.(10);
-
   // Background gradient
   const gradient = ctx.createLinearGradient(0, 0, width, height);
   gradient.addColorStop(0, palette[0]);
