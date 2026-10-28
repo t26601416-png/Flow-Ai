@@ -58,7 +58,7 @@ export default function Dashboard() {
 
       {/* Model Status Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        {(['flow-1-flash', 'flow-1-pro'] as FlowModel[]).map((modelId) => {
+        {(['flow-1-flash', 'flow-1-pro', 'flow-argon-2'] as FlowModel[]).map((modelId) => {
           const config = MODEL_CONFIGS[modelId];
           const status = modelLoadStatus[modelId];
           const isLoaded = loadedModels.includes(modelId);
