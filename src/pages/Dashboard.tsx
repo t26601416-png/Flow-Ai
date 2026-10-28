@@ -158,6 +158,31 @@ export default function Dashboard() {
             {language === 'uk' ? 'Відкрити генератор' : 'Open Generator'}
           </button>
         </div>
+
+        {/* Flow-omni 1 Card */}
+        <div className="glass rounded-2xl p-5 ring-1 ring-purple-500/30">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center">
+                <CheckCircle className="w-5 h-5 text-green-400" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-white">Flow-omni 1</h3>
+                <p className="text-xs text-slate-400">Video Generation • 30 FPS</p>
+              </div>
+            </div>
+            <span className="px-2 py-1 rounded-lg bg-green-500/20 text-green-300 text-xs">Ready</span>
+          </div>
+          <p className="text-sm text-slate-400 mb-3">
+            {language === 'uk' ? 'Генерація відео з 30 кадрами/сек' : 'Video generation at 30 frames/sec'}
+          </p>
+          <button
+            onClick={() => setCurrentPage('videoAI')}
+            className="w-full py-2 rounded-xl bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 text-sm font-medium transition-colors"
+          >
+            {language === 'uk' ? 'Відкрити генератор' : 'Open Generator'}
+          </button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -167,7 +192,7 @@ export default function Dashboard() {
             <span className="text-slate-400 text-sm">{t('dashboard.installedModels', language)}</span>
             <Package className="w-5 h-5 text-purple-400" />
           </div>
-          <p className="font-semibold text-white text-3xl">{loadedModels.length + 1}/3</p>
+          <p className="font-semibold text-white text-3xl">{loadedModels.length + 2}/4</p>
           <p className="text-xs text-slate-500 mt-1">Flow Neural Engine</p>
         </div>
         <div className="glass rounded-2xl p-5">

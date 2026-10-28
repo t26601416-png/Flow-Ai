@@ -5,7 +5,7 @@ import { isModelLoaded, getLoadedModels } from '../services/neuralEngine';
 import {
   LayoutDashboard, MessageSquare, GitBranch, Bot, Package,
   BookOpen, FileText, Image, Mic, Zap, Server, Settings,
-  ChevronLeft, ChevronRight, Brain, Cpu, Globe
+  ChevronLeft, ChevronRight, Brain, Cpu, Globe, Video
 } from 'lucide-react';
 
 const navItems = [
@@ -18,6 +18,7 @@ const navItems = [
   { id: 'knowledge', icon: BookOpen, label: 'nav.knowledge' },
   { id: 'documents', icon: FileText, label: 'nav.documents' },
   { id: 'imageAI', icon: Image, label: 'nav.imageAI' },
+  { id: 'videoAI', icon: Video, label: 'nav.videoAI' },
   { id: 'audioAI', icon: Mic, label: 'nav.audioAI' },
   { id: 'automation', icon: Zap, label: 'nav.automation' },
   { id: 'apiServer', icon: Server, label: 'nav.apiServer' },

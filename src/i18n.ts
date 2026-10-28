@@ -13,6 +13,7 @@ export const translations: Translations = {
   'nav.knowledge': { uk: 'База знань', en: 'Knowledge Base' },
   'nav.documents': { uk: 'Документи', en: 'Documents' },
   'nav.imageAI': { uk: 'Генерація зображень', en: 'Image Generation' },
+  'nav.videoAI': { uk: 'Генерація відео', en: 'Video Generation' },
   'nav.audioAI': { uk: 'Аудіо AI', en: 'Audio AI' },
   'nav.automation': { uk: 'Автоматизація', en: 'Automation' },
   'nav.apiServer': { uk: 'API Сервер', en: 'API Server' },
