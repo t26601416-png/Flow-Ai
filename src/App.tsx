@@ -13,6 +13,7 @@ import AudioAI from './pages/AudioAI';
 import Automation from './pages/Automation';
 import APIServer from './pages/APIServer';
 import Documents from './pages/Documents';
+import Browser from './pages/Browser';
 import { Toaster } from 'react-hot-toast';
 
 function App() {
@@ -25,6 +26,7 @@ function App() {
       case 'flowBuilder': return <FlowBuilder />;
       case 'models': return <Models />;
       case 'agents': return <Agents />;
+      case 'browser': return <Browser />;
       case 'knowledge': return <KnowledgeBase />;
       case 'documents': return <Documents />;
       case 'imageAI': return <ImageAI />;

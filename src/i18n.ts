@@ -9,6 +9,7 @@ export const translations: Translations = {
   'nav.flowBuilder': { uk: 'Flow Builder', en: 'Flow Builder' },
   'nav.agents': { uk: 'AI Агенти', en: 'AI Agents' },
   'nav.models': { uk: 'Моделі', en: 'Models' },
+  'nav.browser': { uk: 'Браузер', en: 'Browser' },
   'nav.knowledge': { uk: 'База знань', en: 'Knowledge Base' },
   'nav.documents': { uk: 'Документи', en: 'Documents' },
   'nav.imageAI': { uk: 'Генерація зображень', en: 'Image Generation' },
