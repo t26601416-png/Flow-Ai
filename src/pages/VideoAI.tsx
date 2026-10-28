@@ -2,14 +2,16 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useStore } from '../store';
 import { t } from '../i18n';
 import { generateVideo, VIDEO_MODEL_CONFIGS } from '../services/videoGenerator';
+import { generateAdvancedVideo, ADVANCED_VIDEO_MODEL_CONFIGS } from '../services/videoGeneratorV2';
 import { Video, Play, Pause, Download, Settings, Loader, Sparkles } from 'lucide-react';
 
 export default function VideoAI() {
   const { language } = useStore();
   const [prompt, setPrompt] = useState('');
-  const [duration, setDuration] = useState(1);
+  const [duration, setDuration] = useState(2);
   const [resolution, setResolution] = useState('512x512');
   const [style, setStyle] = useState('abstract');
+  const [selectedModel, setSelectedModel] = useState<'flow-omni-1' | 'flow-omni-1.5'>('flow-omni-1.5');
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [currentFrame, setCurrentFrame] = useState(0);
@@ -18,7 +20,9 @@ export default function VideoAI() {
   const [videoInfo, setVideoInfo] = useState<{ frames: number; fps: number; duration: number } | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  const modelConfig = VIDEO_MODEL_CONFIGS['flow-omni-1'];
+  const modelConfig = selectedModel === 'flow-omni-1' 
+    ? VIDEO_MODEL_CONFIGS['flow-omni-1']
+    : ADVANCED_VIDEO_MODEL_CONFIGS['flow-omni-1.5'];
 
   const handleGenerate = async () => {
     if (!prompt.trim() || isGenerating) return;
@@ -33,23 +37,45 @@ export default function VideoAI() {
     setTotalFrames(frames);
     
     try {
-      const result = await generateVideo(prompt, {
-        width,
-        height,
-        duration,
-        fps,
-        style,
-        onProgress: (prog, frame, total) => {
-          setProgress(prog);
-          setCurrentFrame(frame);
-          setTotalFrames(total);
-        },
-      });
+      let result;
+      
+      if (selectedModel === 'flow-omni-1') {
+        result = await generateVideo(prompt, {
+          width,
+          height,
+          duration,
+          fps,
+          style,
+          onProgress: (prog, frame, total) => {
+            setProgress(prog);
+            setCurrentFrame(frame);
+            setTotalFrames(total);
+          },
+        });
+      } else {
+        result = await generateAdvancedVideo(prompt, {
+          width,
+          height,
+          duration,
+          fps,
+          style,
+          onProgress: (prog, frame, total) => {
+            setProgress(prog);
+            setCurrentFrame(frame);
+            setTotalFrames(total);
+          },
+        });
+      }
+      
+      if (!result.videoUrl) {
+        throw new Error('Failed to generate video');
+      }
       
       setVideoUrl(result.videoUrl);
       setVideoInfo({ frames: result.frames, fps: result.fps, duration: result.duration });
     } catch (error) {
       console.error('Video generation failed:', error);
+      alert(`Помилка генерації: ${error instanceof Error ? error.message : 'Невідома помилка'}`);
     } finally {
       setIsGenerating(false);
     }
@@ -91,6 +117,45 @@ export default function VideoAI() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Controls Panel */}
         <div className="lg:col-span-1 space-y-4">
+          {/* Model Selector */}
+          <div className="glass rounded-2xl p-5">
+            <h3 className="text-sm font-medium text-white mb-3">
+              {language === 'uk' ? 'Модель' : 'Model'}
+            </h3>
+            <div className="space-y-2">
+              <button
+                onClick={() => {
+                  setSelectedModel('flow-omni-1');
+                  setDuration(1);
+                  setResolution('512x512');
+                }}
+                className={`w-full px-4 py-3 rounded-xl text-sm font-medium transition-all flex items-center justify-between ${
+                  selectedModel === 'flow-omni-1'
+                    ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                    : 'bg-slate-800/50 text-slate-400 hover:text-white hover:bg-slate-700/50'
+                }`}
+              >
+                <span>Flow-omni 1</span>
+                <span className="text-xs">30 FPS</span>
+              </button>
+              <button
+                onClick={() => {
+                  setSelectedModel('flow-omni-1.5');
+                  setDuration(2);
+                  setResolution('512x512');
+                }}
+                className={`w-full px-4 py-3 rounded-xl text-sm font-medium transition-all flex items-center justify-between ${
+                  selectedModel === 'flow-omni-1.5'
+                    ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                    : 'bg-slate-800/50 text-slate-400 hover:text-white hover:bg-slate-700/50'
+                }`}
+              >
+                <span>Flow-omni 1.5 ✨</span>
+                <span className="text-xs">60 FPS</span>
+              </button>
+            </div>
+          </div>
+
           {/* Prompt */}
           <div className="glass rounded-2xl p-5">
             <h3 className="text-sm font-medium text-white mb-3 flex items-center gap-2">
@@ -136,21 +201,46 @@ export default function VideoAI() {
             <h3 className="text-sm font-medium text-white mb-3">
               {language === 'uk' ? 'Тривалість' : 'Duration'}
             </h3>
-            <div className="flex items-center gap-3">
-              <input
-                type="range"
-                min="1"
-                max="5"
-                step="1"
-                value={duration}
-                onChange={(e) => setDuration(parseInt(e.target.value))}
-                className="flex-1 accent-purple-500"
-              />
-              <span className="text-sm text-purple-300 w-12 text-right">{duration}s</span>
-            </div>
-            <p className="text-xs text-slate-500 mt-2">
-              {duration * modelConfig.fps} {language === 'uk' ? 'кадрів' : 'frames'} @ {modelConfig.fps} FPS
-            </p>
+            {selectedModel === 'flow-omni-1' ? (
+              <>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="range"
+                    min="1"
+                    max="5"
+                    step="1"
+                    value={duration}
+                    onChange={(e) => setDuration(parseInt(e.target.value))}
+                    className="flex-1 accent-purple-500"
+                  />
+                  <span className="text-sm text-purple-300 w-12 text-right">{duration}s</span>
+                </div>
+                <p className="text-xs text-slate-500 mt-2">
+                  {duration * modelConfig.fps} {language === 'uk' ? 'кадрів' : 'frames'} @ {modelConfig.fps} FPS
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="range"
+                    min="1"
+                    max="30"
+                    step="1"
+                    value={duration}
+                    onChange={(e) => setDuration(parseInt(e.target.value))}
+                    className="flex-1 accent-purple-500"
+                  />
+                  <span className="text-sm text-purple-300 w-12 text-right">{duration}s</span>
+                </div>
+                <p className="text-xs text-slate-500 mt-2">
+                  {duration * modelConfig.fps} {language === 'uk' ? 'кадрів' : 'frames'} @ {modelConfig.fps} FPS
+                </p>
+                <p className="text-xs text-purple-400 mt-1">
+                  ✨ {language === 'uk' ? 'Без ліміту тривалості' : 'Unlimited duration'}
+                </p>
+              </>
+            )}
           </div>
 
           {/* Resolution */}

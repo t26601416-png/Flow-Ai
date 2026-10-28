@@ -5,6 +5,7 @@ import { MODEL_CONFIGS, loadModel, isModelLoaded, getLoadedModels, unloadModel }
 import { IMAGE_MODEL_CONFIGS } from '../services/imageGenerator';
 import { ADVANCED_IMAGE_MODEL_CONFIGS } from '../services/imageGeneratorV2';
 import { VIDEO_MODEL_CONFIGS } from '../services/videoGenerator';
+import { ADVANCED_VIDEO_MODEL_CONFIGS } from '../services/videoGeneratorV2';
 import type { FlowModel } from '../services/neuralEngine';
 import {
   Package, Download, Trash2, Brain, Cpu, HardDrive,
@@ -53,7 +54,7 @@ export default function Models() {
         <div className="flex items-center gap-3">
           <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${loadedModels.length > 0 ? 'bg-green-500/10 text-green-400' : 'bg-slate-700/50 text-slate-400'}`}>
             <Brain className="w-4 h-4" />
-            <span className="text-xs">{loadedModels.length + 3}/5 {language === 'uk' ? 'доступно' : 'available'}</span>
+            <span className="text-xs">{loadedModels.length + 4}/6 {language === 'uk' ? 'доступно' : 'available'}</span>
           </div>
         </div>
       </div>
@@ -443,6 +444,91 @@ export default function Models() {
               </button>
             </div>
           </div>
+
+          {/* Flow-omni 1.5 */}
+          {(() => {
+            const advVideoModel = ADVANCED_VIDEO_MODEL_CONFIGS['flow-omni-1.5'];
+            return (
+              <div className="mt-6 glass rounded-2xl p-6 ring-1 ring-purple-500/30">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center">
+                      <Sparkles className="w-7 h-7 text-purple-400" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                        {advVideoModel.name}
+                        <span className="px-2 py-0.5 rounded-lg bg-purple-500/20 text-purple-300 text-xs">NEW</span>
+                      </h2>
+                      <p className="text-sm text-slate-400">{language === 'uk' ? advVideoModel.description : advVideoModel.descriptionEn}</p>
+                    </div>
+                  </div>
+                  <span className="px-3 py-1.5 rounded-xl bg-green-500/20 text-green-300 text-sm font-medium flex items-center gap-1">
+                    <CheckCircle className="w-4 h-4" /> Ready
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
+                  <div className="bg-slate-800/30 rounded-xl p-3 text-center">
+                    <Package className="w-4 h-4 text-purple-400 mx-auto mb-1" />
+                    <p className="text-xs text-slate-400">{language === 'uk' ? 'Тип' : 'Type'}</p>
+                    <p className="text-sm font-medium text-white">{advVideoModel.type}</p>
+                  </div>
+                  <div className="bg-slate-800/30 rounded-xl p-3 text-center">
+                    <HardDrive className="w-4 h-4 text-pink-400 mx-auto mb-1" />
+                    <p className="text-xs text-slate-400">{language === 'uk' ? 'Розмір' : 'Size'}</p>
+                    <p className="text-sm font-medium text-white">{advVideoModel.size}</p>
+                  </div>
+                  <div className="bg-slate-800/30 rounded-xl p-3 text-center">
+                    <Zap className="w-4 h-4 text-amber-400 mx-auto mb-1" />
+                    <p className="text-xs text-slate-400">FPS</p>
+                    <p className="text-sm font-medium text-white">{advVideoModel.fps}</p>
+                  </div>
+                  <div className="bg-slate-800/30 rounded-xl p-3 text-center">
+                    <Video className="w-4 h-4 text-cyan-400 mx-auto mb-1" />
+                    <p className="text-xs text-slate-400">{language === 'uk' ? 'Тривалість' : 'Duration'}</p>
+                    <p className="text-sm font-medium text-white">{language === 'uk' ? 'Без ліміту' : 'Unlimited'}</p>
+                  </div>
+                  <div className="bg-slate-800/30 rounded-xl p-3 text-center">
+                    <Cpu className="w-4 h-4 text-emerald-400 mx-auto mb-1" />
+                    <p className="text-xs text-slate-400">{language === 'uk' ? 'Формат' : 'Format'}</p>
+                    <p className="text-sm font-medium text-white">WebM</p>
+                  </div>
+                </div>
+
+                <div className="flex gap-3 mb-4">
+                  <button
+                    onClick={() => useStore.getState().setCurrentPage('videoAI')}
+                    className="flex-1 py-3 rounded-xl bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-200 hover:from-purple-500/30 hover:to-pink-500/30 text-sm font-medium transition-all flex items-center justify-center gap-2"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    {language === 'uk' ? 'Відкрити генератор' : 'Open Generator'}
+                  </button>
+                </div>
+
+                <div className="pt-4 border-t border-slate-700/50">
+                  <p className="text-xs text-slate-400 mb-2">{language === 'uk' ? 'Особливості:' : 'Features:'}</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {[
+                      { uk: '60 кадрів на секунду', en: '60 frames per second', emoji: '🎬' },
+                      { uk: 'Без ліміту тривалості', en: 'Unlimited duration', emoji: '⏱️' },
+                      { uk: '4 стилі анімації', en: '4 animation styles', emoji: '🎨' },
+                      { uk: 'Роздільна здатність до 1024×1024', en: 'Resolution up to 1024×1024', emoji: '📐' },
+                      { uk: 'Покращена процедурна анімація', en: 'Enhanced procedural animation', emoji: '🌊' },
+                      { uk: 'Палітри на основі промту', en: 'Prompt-based palettes', emoji: '🎭' },
+                      { uk: 'Експорт у WebM (VP9)', en: 'WebM (VP9) export', emoji: '💾' },
+                      { uk: '100% локально', en: '100% local', emoji: '🏠' },
+                    ].map((feature, i) => (
+                      <div key={i} className="flex items-center gap-2 text-xs text-slate-300">
+                        <span className="text-purple-400">{feature.emoji}</span>
+                        {language === 'uk' ? feature.uk : feature.en}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Features */}
           <div className="mt-6 glass rounded-2xl p-5">

@@ -159,7 +159,7 @@ export default function Dashboard() {
           </button>
         </div>
 
-        {/* Flow-omni 1 Card */}
+        {/* Flow-omni 1 & 1.5 Card */}
         <div className="glass rounded-2xl p-5 ring-1 ring-purple-500/30">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-3">
@@ -167,14 +167,14 @@ export default function Dashboard() {
                 <CheckCircle className="w-5 h-5 text-green-400" />
               </div>
               <div>
-                <h3 className="font-semibold text-white">Flow-omni 1</h3>
-                <p className="text-xs text-slate-400">Video Generation • 30 FPS</p>
+                <h3 className="font-semibold text-white">Flow-omni 1 & 1.5</h3>
+                <p className="text-xs text-slate-400">Video Generation • 30-60 FPS</p>
               </div>
             </div>
             <span className="px-2 py-1 rounded-lg bg-green-500/20 text-green-300 text-xs">Ready</span>
           </div>
           <p className="text-sm text-slate-400 mb-3">
-            {language === 'uk' ? 'Генерація відео з 30 кадрами/сек' : 'Video generation at 30 frames/sec'}
+            {language === 'uk' ? 'Дві моделі: базова + покращена 60 FPS' : 'Two models: basic + enhanced 60 FPS'}
           </p>
           <button
             onClick={() => setCurrentPage('videoAI')}
@@ -192,7 +192,7 @@ export default function Dashboard() {
             <span className="text-slate-400 text-sm">{t('dashboard.installedModels', language)}</span>
             <Package className="w-5 h-5 text-purple-400" />
           </div>
-          <p className="font-semibold text-white text-3xl">{loadedModels.length + 3}/5</p>
+          <p className="font-semibold text-white text-3xl">{loadedModels.length + 4}/6</p>
           <p className="text-xs text-slate-500 mt-1">Flow Neural Engine</p>
         </div>
         <div className="glass rounded-2xl p-5">
