@@ -4,8 +4,8 @@ import { t } from '../i18n';
 import { isModelLoaded, getLoadedModels, loadModel, MODEL_CONFIGS } from '../services/neuralEngine';
 import type { FlowModel } from '../services/neuralEngine';
 import {
-  Brain, Cpu, HardDrive, Wifi, WifiOff, MessageSquare,
-  Bot, GitBranch, Package, RefreshCw, Zap, ArrowRight, Clock,
+  Brain, Cpu, HardDrive, MessageSquare,
+  Bot, GitBranch, Package, Zap, ArrowRight, Clock,
   Download, CheckCircle, Loader
 } from 'lucide-react';
 

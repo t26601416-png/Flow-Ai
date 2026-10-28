@@ -7,8 +7,8 @@ import type { FlowModel } from '../services/neuralEngine';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {
-  Send, Square, Plus, Trash2, Copy, RefreshCw, MessageSquare,
-  Settings2, Check, X, Brain, Download, Loader, Globe, Search
+  Send, Square, Plus, Trash2, Copy, MessageSquare,
+  Settings2, Check, Brain, Download, Loader, Globe, Search
 } from 'lucide-react';
 
 export default function Chat() {
@@ -26,7 +26,6 @@ export default function Chat() {
   const [showChatList, setShowChatList] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [isWebSearching, setIsWebSearching] = useState(false);
-  const [webSearchResults, setWebSearchResults] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef(false);
 
@@ -248,8 +247,6 @@ export default function Chat() {
       // Perform web search
       const searchResults = await searchWeb(userQuery);
       const webContext = formatSearchResultsForAI(searchResults);
-      
-      setWebSearchResults(webContext);
 
       // Update searching message with results preview
       const resultsPreview = searchResults.results.slice(0, 3).map((r, i) => 
@@ -387,7 +384,6 @@ export default function Chat() {
     } finally {
       setIsWebSearching(false);
       setIsGenerating(false);
-      setWebSearchResults(null);
     }
   };
 

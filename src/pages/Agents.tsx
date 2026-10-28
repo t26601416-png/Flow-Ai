@@ -4,7 +4,7 @@ import { t } from '../i18n';
 import { generateTextStream, isModelLoaded, loadModel, MODEL_CONFIGS } from '../services/neuralEngine';
 import type { FlowModel } from '../services/neuralEngine';
 import {
-  Bot, Plus, Trash2, Edit3, MessageSquare, X, Wrench, Brain, Play, Loader
+  Bot, Plus, Trash2, Edit3, MessageSquare, X, Wrench, Play, Loader
 } from 'lucide-react';
 
 const defaultIcons = ['💻', '🌐', '📊', '🎨', '📝', '🔬', '🎯', '⚡', '🧠', '🤖'];

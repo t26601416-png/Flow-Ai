@@ -5,7 +5,7 @@ import { MODEL_CONFIGS, loadModel, isModelLoaded, getLoadedModels, unloadModel }
 import { IMAGE_MODEL_CONFIGS } from '../services/imageGenerator';
 import type { FlowModel } from '../services/neuralEngine';
 import {
-  Package, Download, Trash2, Check, Brain, Cpu, HardDrive,
+  Package, Download, Trash2, Brain, Cpu, HardDrive,
   Zap, Loader, CheckCircle, Image
 } from 'lucide-react';
 
