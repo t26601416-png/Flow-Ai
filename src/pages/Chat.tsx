@@ -7,7 +7,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {
   Send, Square, Plus, Trash2, Copy, RefreshCw, MessageSquare,
-  Settings2, Check, X, Brain, Download, Loader
+  Settings2, Check, X, Brain, Download, Loader, Globe
 } from 'lucide-react';
 
 export default function Chat() {
@@ -15,7 +15,8 @@ export default function Chat() {
     language, chats, activeChatId, addChat, updateChat, deleteChat,
     setActiveChatId, addMessage, activeModel, setActiveModel,
     temperature, topP, topK, maxTokens, repetitionPenalty,
-    loadedModels, setLoadedModels, modelLoadStatus, setModelLoadStatus
+    loadedModels, setLoadedModels, modelLoadStatus, setModelLoadStatus,
+    setCurrentPage
   } = useStore();
 
   const [input, setInput] = useState('');
@@ -180,6 +181,27 @@ export default function Chat() {
     URL.revokeObjectURL(url);
   };
 
+  const handleWebSearch = (source: 'input' | 'lastMessage') => {
+    let query = '';
+    
+    if (source === 'input' && input.trim()) {
+      query = input.trim();
+    } else if (source === 'lastMessage' && activeChat) {
+      // Get last user message
+      const lastUserMsg = [...activeChat.messages].reverse().find(m => m.role === 'user');
+      if (lastUserMsg) {
+        query = lastUserMsg.content;
+      }
+    }
+    
+    if (query) {
+      // Save search query to localStorage for Browser to pick up
+      localStorage.setItem('browser-search-query', query);
+      // Navigate to browser
+      setCurrentPage('browser');
+    }
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -261,6 +283,14 @@ export default function Chat() {
               <option value="flow-1-flash">Flow-1 Flash ⚡</option>
               <option value="flow-1-pro">Flow-1 Pro 🧠</option>
             </select>
+            <button
+              onClick={() => handleWebSearch('lastMessage')}
+              disabled={!activeChat || activeChat.messages.filter(m => m.role === 'user').length === 0}
+              className="p-2 rounded-lg hover:bg-white/5 text-slate-400 disabled:opacity-30 disabled:cursor-not-allowed"
+              title={language === 'uk' ? 'Шукати в інтернеті' : 'Search the web'}
+            >
+              <Globe className="w-4 h-4" />
+            </button>
             <button
               onClick={() => setShowSettings(!showSettings)}
               className={`p-2 rounded-lg transition-colors ${showSettings ? 'bg-indigo-500/20 text-indigo-300' : 'hover:bg-white/5 text-slate-400'}`}
@@ -393,6 +423,14 @@ export default function Chat() {
                 style={{ minHeight: '44px', maxHeight: '150px' }}
               />
             </div>
+            <button
+              onClick={() => handleWebSearch('input')}
+              disabled={!input.trim()}
+              className="px-4 py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 hover:bg-emerald-500/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              title={language === 'uk' ? 'Шукати в інтернеті' : 'Search the web'}
+            >
+              <Globe className="w-5 h-5" />
+            </button>
             {isGenerating ? (
               <button
                 onClick={handleStop}

@@ -51,6 +51,18 @@ export default function Browser() {
     const savedBookmarks = localStorage.getItem('browser-bookmarks');
     if (savedHistory) setHistory(JSON.parse(savedHistory));
     if (savedBookmarks) setBookmarks(JSON.parse(savedBookmarks));
+    
+    // Check for search query from Chat
+    const searchQuery = localStorage.getItem('browser-search-query');
+    if (searchQuery) {
+      setSearchQuery(searchQuery);
+      localStorage.removeItem('browser-search-query');
+      // Auto-search after a short delay
+      setTimeout(() => {
+        const searchUrl = `https://duckduckgo.com/?q=${encodeURIComponent(searchQuery)}`;
+        navigate(searchUrl);
+      }, 100);
+    }
   }, []);
 
   // Save to localStorage
