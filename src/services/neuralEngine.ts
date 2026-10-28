@@ -39,13 +39,13 @@ export const MODEL_CONFIGS: Record<FlowModel, ModelConfig> = {
   },
   'flow-1-pro': {
     id: 'flow-1-pro',
-    hfModel: 'Xenova/gpt2',
+    hfModel: 'Xenova/distilgpt2',
     name: 'Flow-1 Pro',
-    description: 'Потужна нейромережа для складних завдань. Найкраща якість генерації.',
-    descriptionEn: 'Powerful neural network for complex tasks. Best generation quality.',
-    size: '~500 MB',
-    params: '124M',
-    speed: 'Середня',
+    description: 'Потужна нейромережа для складних завдань. Оптимізована для точності та якості.',
+    descriptionEn: 'Powerful neural network for complex tasks. Optimized for accuracy and quality.',
+    size: '~82 MB',
+    params: '82M',
+    speed: 'Швидка',
     quality: 'Відмінна',
     category: 'General AI',
     maxTokens: 512,
@@ -75,31 +75,49 @@ export async function loadModel(
   const config = MODEL_CONFIGS[model];
   loadingState.set(model, { loading: true, progress: 0, status: 'Ініціалізація...' });
 
-  try {
-    const pipe = await pipeline('text-generation', config.hfModel, {
-      progress_callback: (data: any) => {
-        if (data.status === 'progress' && data.progress) {
-          const progress = Math.round(data.progress);
-          const status = data.file || 'Завантаження...';
-          loadingState.set(model, { loading: true, progress, status });
-          onProgress?.(progress, status);
-        } else if (data.status === 'ready') {
-          loadingState.set(model, { loading: false, progress: 100, status: 'Готова' });
-          onProgress?.(100, 'Готова');
-        } else if (data.status === 'initiate') {
-          loadingState.set(model, { loading: true, progress: 0, status: `Завантаження ${data.file}...` });
-          onProgress?.(0, `Завантаження ${data.file}...`);
-        }
-      },
-    });
+  const maxRetries = 3;
+  let lastError: Error | null = null;
 
-    pipelines.set(model, pipe as TextGenerationPipeline);
-    loadingState.set(model, { loading: false, progress: 100, status: 'Завантажена' });
-    return pipe as TextGenerationPipeline;
-  } catch (error) {
-    loadingState.set(model, { loading: false, progress: 0, status: 'Помилка' });
-    throw error;
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      loadingState.set(model, { loading: true, progress: 0, status: `Спроба ${attempt}/${maxRetries}...` });
+      onProgress?.(0, `Спроба ${attempt}/${maxRetries}...`);
+
+      const pipe = await pipeline('text-generation', config.hfModel, {
+        progress_callback: (data: any) => {
+          if (data.status === 'progress' && data.progress) {
+            const progress = Math.round(data.progress);
+            const status = data.file || 'Завантаження...';
+            loadingState.set(model, { loading: true, progress, status });
+            onProgress?.(progress, status);
+          } else if (data.status === 'ready') {
+            loadingState.set(model, { loading: false, progress: 100, status: 'Готова' });
+            onProgress?.(100, 'Готова');
+          } else if (data.status === 'initiate') {
+            loadingState.set(model, { loading: true, progress: 0, status: `Завантаження ${data.file}...` });
+            onProgress?.(0, `Завантаження ${data.file}...`);
+          }
+        },
+      });
+
+      pipelines.set(model, pipe as TextGenerationPipeline);
+      loadingState.set(model, { loading: false, progress: 100, status: 'Завантажена' });
+      return pipe as TextGenerationPipeline;
+    } catch (error) {
+      lastError = error as Error;
+      console.error(`Attempt ${attempt} failed for ${model}:`, error);
+      
+      if (attempt < maxRetries) {
+        const waitTime = attempt * 2000;
+        loadingState.set(model, { loading: true, progress: 0, status: `Помилка, повтор через ${waitTime/1000}с...` });
+        onProgress?.(0, `Помилка, повтор через ${waitTime/1000}с...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      }
+    }
   }
+
+  loadingState.set(model, { loading: false, progress: 0, status: 'Помилка завантаження' });
+  throw lastError || new Error('Failed to load model after multiple attempts');
 }
 
 export async function generateText(
