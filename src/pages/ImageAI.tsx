@@ -163,7 +163,7 @@ export default function ImageAI() {
                 }`}
               >
                 <span>Flow-image 1.5 ✨</span>
-                <span className="text-xs">GPT Image 2</span>
+                <span className="text-xs">Enhanced</span>
               </button>
             </div>
           </div>
@@ -483,8 +483,8 @@ export default function ImageAI() {
         <p className="text-xs text-slate-500 mt-3">
           {selectedModel === 'flow-image-1.5'
             ? (language === 'uk'
-              ? '💡 Flow-image 1.5 використовує покращені алгоритми з багаторівневим рендерингом, підтримкою тексту на зображеннях та якістю як у GPT Image 2.'
-              : '💡 Flow-image 1.5 uses enhanced algorithms with multi-layer rendering, text support on images, and GPT Image 2 quality.')
+              ? '💡 Flow-image 1.5 використовує покращені алгоритми з багаторівневим рендерингом, підтримкою тексту на зображеннях та високою деталізацією.'
+              : '💡 Flow-image 1.5 uses enhanced algorithms with multi-layer rendering, text support on images, and high detail.')
             : (language === 'uk'
               ? '💡 Flow-image 1 використовує процедурну генерацію на основі хешу промту. Кожне зображення унікальне та детерміноване.'
               : '💡 Flow-image 1 uses procedural generation based on prompt hash. Each image is unique and deterministic.')}

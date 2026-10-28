@@ -149,7 +149,7 @@ export default function Dashboard() {
             <span className="px-2 py-1 rounded-lg bg-green-500/20 text-green-300 text-xs">Ready</span>
           </div>
           <p className="text-sm text-slate-400 mb-3">
-            {language === 'uk' ? 'Дві моделі: базова + GPT Image 2 якість' : 'Two models: basic + GPT Image 2 quality'}
+            {language === 'uk' ? 'Дві моделі: базова + покращена якість' : 'Two models: basic + enhanced quality'}
           </p>
           <button
             onClick={() => setCurrentPage('imageAI')}
