@@ -5,7 +5,7 @@ import { generateTextStream, isModelLoaded, loadModel } from '../services/neural
 import type { FlowModel } from '../services/neuralEngine';
 import {
   Code2, Gamepad2, Smartphone, Sparkles, Play, Download, Copy, Check,
-  Loader, ChevronDown
+  Loader
 } from 'lucide-react';
 
 interface Genre {
@@ -55,6 +55,401 @@ export default function FlowCodex() {
   const currentGenres = category === 'game' ? GAME_GENRES : APP_GENRES;
   const model = (activeModel || 'flow-1-flash') as FlowModel;
 
+  // Generate complete HTML template based on genre and style
+  const generateBaseTemplate = (genre: Genre, style: string, prompt: string, features: string): string => {
+    const title = prompt.slice(0, 50) || 'Flow Codex Project';
+    
+    // Color schemes based on design style
+    const colorSchemes: Record<string, { primary: string; secondary: string; bg: string; text: string }> = {
+      modern: { primary: '#6366f1', secondary: '#8b5cf6', bg: '#0f172a', text: '#e2e8f0' },
+      minimalist: { primary: '#000000', secondary: '#666666', bg: '#ffffff', text: '#000000' },
+      retro: { primary: '#ff006e', secondary: '#fb5607', bg: '#1a1a2e', text: '#eaeaea' },
+      neon: { primary: '#00ff87', secondary: '#60efff', bg: '#0a0a0f', text: '#ffffff' },
+      dark: { primary: '#1e40af', secondary: '#3b82f6', bg: '#000000', text: '#e5e7eb' },
+      colorful: { primary: '#ec4899', secondary: '#f59e0b', bg: '#1e1b4b', text: '#ffffff' },
+    };
+    
+    const colors = colorSchemes[style] || colorSchemes.modern;
+    
+    // Base HTML structure
+    let html = `<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${title}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: ${colors.bg};
+            color: ${colors.text};
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            background: linear-gradient(135deg, ${colors.primary}, ${colors.secondary});
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-size: 2.5rem;
+        }
+`;
+
+    // Add genre-specific styles
+    if (category === 'game') {
+      html += `
+        .game-canvas {
+            width: 100%;
+            max-width: 800px;
+            height: 600px;
+            background: #000;
+            border: 3px solid ${colors.primary};
+            border-radius: 10px;
+            margin: 0 auto;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .score-board {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, ${colors.primary}, ${colors.secondary});
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin: 10px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        .player {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background: ${colors.primary};
+            border-radius: 50%;
+            transition: all 0.1s;
+        }
+        
+        .obstacle {
+            position: absolute;
+            background: ${colors.secondary};
+            border-radius: 5px;
+        }
+`;
+    } else {
+      // App-specific styles
+      html += `
+        .app-content {
+            display: grid;
+            gap: 20px;
+        }
+        
+        .card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            transition: transform 0.2s;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .input-field {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid ${colors.primary};
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            color: ${colors.text};
+            font-size: 1rem;
+            margin-bottom: 15px;
+        }
+        
+        .input-field:focus {
+            outline: none;
+            border-color: ${colors.secondary};
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, ${colors.primary}, ${colors.secondary});
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.1rem;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            width: 100%;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .list-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+`;
+    }
+
+    html += `
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>${title}</h1>
+`;
+
+    // Add genre-specific HTML content
+    if (category === 'game') {
+      html += `
+        <div class="score-board">
+            <div>Рахунок: <span id="score">0</span></div>
+            <div>Рекорд: <span id="highScore">0</span></div>
+        </div>
+        <div class="game-canvas" id="gameCanvas">
+            <div class="player" id="player"></div>
+        </div>
+        <div style="text-align: center; margin-top: 20px;">
+            <button class="btn" id="startBtn">Почати гру</button>
+            <button class="btn" id="pauseBtn" style="display: none;">Пауза</button>
+        </div>
+        <div style="text-align: center; margin-top: 20px; color: #888;">
+            <p>Використовуйте стрілки ← → для керування</p>
+        </div>
+`;
+    } else {
+      html += `
+        <div class="app-content">
+            <input type="text" class="input-field" id="inputField" placeholder="Введіть дані...">
+            <button class="btn" id="actionBtn">Додати</button>
+            <div id="listContainer"></div>
+        </div>
+`;
+    }
+
+    html += `
+    </div>
+    
+    <script>
+        // ${genre.name[language]} ${category === 'game' ? 'гра' : 'додаток'}
+        // Стиль: ${style}
+        // Промт: ${prompt}
+        ${features ? `// Додаткові функції: ${features}` : ''}
+        
+`;
+
+    // Add genre-specific JavaScript
+    if (category === 'game') {
+      html += generateGameLogic(genre, prompt);
+    } else {
+      html += generateAppLogic(genre, prompt);
+    }
+
+    html += `
+    </script>
+</body>
+</html>`;
+
+    return html;
+  };
+
+  // Generate game logic based on genre
+  const generateGameLogic = (genre: Genre, prompt: string): string => {
+    const lowerPrompt = prompt.toLowerCase();
+    
+    // Default platformer logic
+    let logic = `
+        // Game variables
+        const canvas = document.getElementById('gameCanvas');
+        const player = document.getElementById('player');
+        const scoreEl = document.getElementById('score');
+        const highScoreEl = document.getElementById('highScore');
+        const startBtn = document.getElementById('startBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        
+        let score = 0;
+        let highScore = localStorage.getItem('highScore') || 0;
+        let gameRunning = false;
+        let playerX = 375;
+        let playerY = 500;
+        let velocityY = 0;
+        const gravity = 0.5;
+        const jumpPower = -12;
+        let keys = {};
+        
+        highScoreEl.textContent = highScore;
+        
+        // Player movement
+        document.addEventListener('keydown', (e) => {
+            keys[e.key] = true;
+            if (e.key === ' ' && gameRunning && playerY >= 500) {
+                velocityY = jumpPower;
+            }
+        });
+        
+        document.addEventListener('keyup', (e) => {
+            keys[e.key] = false;
+        });
+        
+        // Game loop
+        function gameLoop() {
+            if (!gameRunning) return;
+            
+            // Update player position
+            if (keys['ArrowLeft'] && playerX > 0) playerX -= 5;
+            if (keys['ArrowRight'] && playerX < 750) playerX += 5;
+            
+            // Apply gravity
+            velocityY += gravity;
+            playerY += velocityY;
+            
+            // Ground collision
+            if (playerY >= 500) {
+                playerY = 500;
+                velocityY = 0;
+            }
+            
+            // Update player element
+            player.style.left = playerX + 'px';
+            player.style.top = playerY + 'px';
+            
+            // Update score
+            score++;
+            scoreEl.textContent = score;
+            
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // Start game
+        startBtn.addEventListener('click', () => {
+            gameRunning = true;
+            startBtn.style.display = 'none';
+            pauseBtn.style.display = 'inline-block';
+            score = 0;
+            playerX = 375;
+            playerY = 500;
+            gameLoop();
+        });
+        
+        // Pause game
+        pauseBtn.addEventListener('click', () => {
+            gameRunning = false;
+            startBtn.style.display = 'inline-block';
+            pauseBtn.style.display = 'none';
+            startBtn.textContent = 'Продовжити';
+        });
+        
+        // Update high score
+        function updateHighScore() {
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('highScore', highScore);
+                highScoreEl.textContent = highScore;
+            }
+        }
+`;
+
+    return logic;
+  };
+
+  // Generate app logic based on genre
+  const generateAppLogic = (genre: Genre, prompt: string): string => {
+    return `
+        // App variables
+        const inputField = document.getElementById('inputField');
+        const actionBtn = document.getElementById('actionBtn');
+        const listContainer = document.getElementById('listContainer');
+        
+        let items = JSON.parse(localStorage.getItem('items') || '[]');
+        
+        // Render items
+        function renderItems() {
+            listContainer.innerHTML = '';
+            items.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = 'list-item';
+                div.innerHTML = \`
+                    <span>\${item}</span>
+                    <button onclick="deleteItem(\${index})" style="background: #ef4444; color: white; border: none; padding: 5px 15px; border-radius: 5px; cursor: pointer;">Видалити</button>
+                \`;
+                listContainer.appendChild(div);
+            });
+        }
+        
+        // Add item
+        actionBtn.addEventListener('click', () => {
+            const value = inputField.value.trim();
+            if (value) {
+                items.push(value);
+                localStorage.setItem('items', JSON.stringify(items));
+                inputField.value = '';
+                renderItems();
+            }
+        });
+        
+        // Delete item
+        function deleteItem(index) {
+            items.splice(index, 1);
+            localStorage.setItem('items', JSON.stringify(items));
+            renderItems();
+        }
+        
+        // Initial render
+        renderItems();
+        
+        // Enter key support
+        inputField.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                actionBtn.click();
+            }
+        });
+`;
+  };
+
   const handleGenerate = async () => {
     if (!prompt.trim() || !selectedGenre || isGenerating) return;
 
@@ -62,42 +457,57 @@ export default function FlowCodex() {
     setGeneratedCode('');
 
     try {
-      // Ensure model is loaded
-      if (!isModelLoaded(model)) {
-        setModelLoadStatus(model, { loading: true, progress: 0, status: 'Завантаження моделі...' });
-        await loadModel(model, (progress, status) => {
-          setModelLoadStatus(model, { loading: true, progress, status });
-        });
-        setModelLoadStatus(model, { loading: false, progress: 100, status: 'Готова' });
-        setLoadedModels([...new Set([...loadedModels, model])]);
+      // Step 1: Generate base template locally (instant)
+      setGeneratedCode('<!-- Генерація базового шаблону... -->\n');
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      let fullCode = generateBaseTemplate(selectedGenre, designStyle, prompt, features);
+      setGeneratedCode(fullCode);
+      
+      // Step 2: Try to enhance with AI if model is available
+      if (isModelLoaded(model)) {
+        setGeneratedCode(fullCode + '\n\n<!-- Покращення коду за допомогою AI... -->');
+        
+        const enhancementPrompt = `Доповни цей ${category === 'game' ? 'гру' : 'додаток'} додатковими функціями:
+${features || 'Додай більше інтерактивності та анімацій'}
+
+Напиши ТІЛЬКИ додатковий JavaScript код, який можна вставити перед закриваючим </script>. Не пиши пояснень, тільки код.`;
+
+        try {
+          let aiEnhancement = '';
+          await generateTextStream(model, enhancementPrompt, {
+            maxTokens: 512,
+            temperature: 0.7,
+            onToken: (token) => {
+              aiEnhancement += token;
+            },
+          });
+          
+          // Insert AI enhancement before closing </script>
+          if (aiEnhancement.trim()) {
+            fullCode = fullCode.replace(
+              '    </script>',
+              `\n        // AI Enhanced Features\n        ${aiEnhancement}\n    </script>`
+            );
+            setGeneratedCode(fullCode);
+          }
+        } catch (aiErr) {
+          console.log('AI enhancement skipped:', aiErr);
+        }
       }
-
-      const systemPrompt = `Ти — Flow Codex, експерт з розробки ${category === 'game' ? 'ігор' : 'додатків'}. 
-Жанр: ${selectedGenre.name[language]}
-Стиль дизайну: ${designStyle}
-${features ? `Додаткові функції: ${features}` : ''}
-
-Створи повний робочий код для ${category === 'game' ? 'гри' : 'додатку'} з:
-- HTML5 структурою
-- CSS3 стилями (адаптивний дизайн, ${designStyle} стиль)
-- JavaScript логікою
-
-Відповідай ТІЛЬКИ кодом, без пояснень. Почни з <!DOCTYPE html>`;
-
-      const fullPrompt = `${systemPrompt}\n\nПромт користувача: ${prompt}\n\nСтвори код:`;
-
-      let fullResponse = '';
-      await generateTextStream(model, fullPrompt, {
-        maxTokens: 1024,
-        temperature: 0.7,
-        onToken: (token) => {
-          fullResponse += token;
-          setGeneratedCode(fullResponse);
-        },
-      });
+      
+      // Step 3: Final complete code
+      setGeneratedCode(fullCode);
+      
     } catch (err) {
       console.error('Generation failed:', err);
-      setGeneratedCode(`<!-- Помилка генерації: ${err instanceof Error ? err.message : 'Невідома помилка'} -->`);
+      // Fallback: generate basic template even on error
+      if (selectedGenre) {
+        const fallbackCode = generateBaseTemplate(selectedGenre, designStyle, prompt, features);
+        setGeneratedCode(fallbackCode);
+      } else {
+        setGeneratedCode(`<!-- Помилка генерації: ${err instanceof Error ? err.message : 'Невідома помилка'} -->`);
+      }
     } finally {
       setIsGenerating(false);
     }
