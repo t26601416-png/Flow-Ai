@@ -208,13 +208,13 @@ export const useStore = create<AppState>()(
       // Agents
       agents: [
         {
-          id: 'agent-programmer',
-          name: 'Програміст',
-          icon: '💻',
-          description: 'AI-асистент для написання та аналізу коду',
-          systemPrompt: 'Ти — досвідчений програміст. Допоможи користувачу з написанням коду.',
+          id: 'agent-flow-code',
+          name: 'Flow Code',
+          icon: '🎨',
+          description: 'AI-асистент для створення веб-сторінок на HTML та CSS',
+          systemPrompt: 'Ти — Flow Code, спеціалізований AI-асистент для створення веб-сторінок. ТИ ЗАВЖДИ пише код ТІЛЬКИ на HTML та CSS. Ніколи не використовуй JavaScript, TypeScript, Python або інші мови програмування. Завжди надавай повний, робочий HTML код з вбудованими або окремими CSS стилями. Якщо користувач просить щось інше, нагадай йому, що ти працюєш ТІЛЬКИ з HTML та CSS. Відповідай українською мовою, якщо користувач пише українською.',
           model: '',
-          tools: ['code_generation', 'code_review', 'debug'],
+          tools: ['code_generation', 'html_css'],
           createdAt: Date.now()
         },
         {
