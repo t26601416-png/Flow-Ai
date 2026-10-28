@@ -2,10 +2,8 @@ import React, { useState } from 'react';
 import { useStore } from '../store';
 import { t } from '../i18n';
 import { generateImage, IMAGE_MODEL_CONFIGS } from '../services/imageGenerator';
-import type { ImageModel } from '../services/imageGenerator';
-import {
-  Image, Wand2, Download, Sparkles, Loader, RefreshCw, Trash2, ZoomIn
-} from 'lucide-react';
+import { generateAdvancedImage, ADVANCED_IMAGE_MODEL_CONFIGS } from '../services/imageGeneratorV2';
+import { Image, Wand2, Download, Sparkles, Loader, Trash2, ZoomIn } from 'lucide-react';
 
 interface GeneratedImage {
   id: string;
@@ -13,20 +11,25 @@ interface GeneratedImage {
   dataUrl: string;
   style: string;
   resolution: string;
+  model: string;
   timestamp: number;
 }
 
 export default function ImageAI() {
   const { language } = useStore();
   const [prompt, setPrompt] = useState('');
-  const [resolution, setResolution] = useState('512x512');
-  const [style, setStyle] = useState<'abstract' | 'geometric' | 'organic' | 'cosmic' | 'landscape'>('abstract');
+  const [resolution, setResolution] = useState('1024x1024');
+  const [style, setStyle] = useState<string>('abstract');
+  const [quality, setQuality] = useState<'standard' | 'high' | 'ultra'>('high');
+  const [selectedModel, setSelectedModel] = useState<'flow-image-1' | 'flow-image-1.5'>('flow-image-1.5');
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [history, setHistory] = useState<GeneratedImage[]>([]);
   const [previewImage, setPreviewImage] = useState<GeneratedImage | null>(null);
 
-  const modelConfig = IMAGE_MODEL_CONFIGS['flow-image-1'];
+  const modelConfig = selectedModel === 'flow-image-1' 
+    ? IMAGE_MODEL_CONFIGS['flow-image-1']
+    : ADVANCED_IMAGE_MODEL_CONFIGS['flow-image-1.5'];
 
   const handleGenerate = async () => {
     if (!prompt.trim() || isGenerating) return;
@@ -37,12 +40,24 @@ export default function ImageAI() {
     try {
       const [width, height] = resolution.split('x').map(Number);
       
-      const dataUrl = await generateImage(prompt, {
-        width,
-        height,
-        style,
-        onProgress: (p) => setProgress(p),
-      });
+      let dataUrl: string;
+      
+      if (selectedModel === 'flow-image-1') {
+        dataUrl = await generateImage(prompt, {
+          width,
+          height,
+          style: style as any,
+          onProgress: (p) => setProgress(p),
+        });
+      } else {
+        dataUrl = await generateAdvancedImage(prompt, {
+          width,
+          height,
+          style: style as any,
+          quality,
+          onProgress: (p) => setProgress(p),
+        });
+      }
 
       const newImage: GeneratedImage = {
         id: `img-${Date.now()}`,
@@ -50,6 +65,7 @@ export default function ImageAI() {
         dataUrl,
         style,
         resolution,
+        model: selectedModel,
         timestamp: Date.now(),
       };
 
@@ -73,13 +89,24 @@ export default function ImageAI() {
     setHistory(prev => prev.filter(img => img.id !== id));
   };
 
-  const styles = [
-    { id: 'abstract' as const, label: { uk: 'Абстракт', en: 'Abstract' }, emoji: '🎨' },
-    { id: 'geometric' as const, label: { uk: 'Геометрія', en: 'Geometric' }, emoji: '📐' },
-    { id: 'organic' as const, label: { uk: 'Органічний', en: 'Organic' }, emoji: '🌿' },
-    { id: 'cosmic' as const, label: { uk: 'Космос', en: 'Cosmic' }, emoji: '🌌' },
-    { id: 'landscape' as const, label: { uk: 'Пейзаж', en: 'Landscape' }, emoji: '🏔️' },
+  const stylesV1 = [
+    { id: 'abstract', label: { uk: 'Абстракт', en: 'Abstract' }, emoji: '🎨' },
+    { id: 'geometric', label: { uk: 'Геометрія', en: 'Geometric' }, emoji: '📐' },
+    { id: 'organic', label: { uk: 'Органічний', en: 'Organic' }, emoji: '🌿' },
+    { id: 'cosmic', label: { uk: 'Космос', en: 'Cosmic' }, emoji: '🌌' },
+    { id: 'landscape', label: { uk: 'Пейзаж', en: 'Landscape' }, emoji: '🏔️' },
   ];
+
+  const stylesV15 = [
+    { id: 'photorealistic', label: { uk: 'Фотореалізм', en: 'Photorealistic' }, emoji: '📷' },
+    { id: 'artistic', label: { uk: 'Художній', en: 'Artistic' }, emoji: '🎨' },
+    { id: 'abstract', label: { uk: 'Абстракт', en: 'Abstract' }, emoji: '✨' },
+    { id: 'minimalist', label: { uk: 'Мінімалізм', en: 'Minimalist' }, emoji: '◻️' },
+    { id: 'portrait', label: { uk: 'Портрет', en: 'Portrait' }, emoji: '👤' },
+    { id: 'landscape', label: { uk: 'Пейзаж', en: 'Landscape' }, emoji: '🏔️' },
+  ];
+
+  const currentStyles = selectedModel === 'flow-image-1' ? stylesV1 : stylesV15;
 
   return (
     <div className="h-full overflow-y-auto p-6 animate-fade-in">
@@ -90,7 +117,7 @@ export default function ImageAI() {
             {t('nav.imageAI', language)}
           </h1>
           <p className="text-sm text-slate-400 mt-1">
-            {language === 'uk' ? 'Генерація зображень — Flow-image 1' : 'Image Generation — Flow-image 1'}
+            {language === 'uk' ? 'Генерація зображень — Flow-image' : 'Image Generation — Flow-image'}
           </p>
         </div>
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-green-500/10 text-green-400">
@@ -102,6 +129,45 @@ export default function ImageAI() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Controls Panel */}
         <div className="lg:col-span-1 space-y-4">
+          {/* Model Selector */}
+          <div className="glass rounded-2xl p-5">
+            <h3 className="text-sm font-medium text-white mb-3">
+              {language === 'uk' ? 'Модель' : 'Model'}
+            </h3>
+            <div className="space-y-2">
+              <button
+                onClick={() => {
+                  setSelectedModel('flow-image-1');
+                  setStyle('abstract');
+                  setResolution('512x512');
+                }}
+                className={`w-full px-4 py-3 rounded-xl text-sm font-medium transition-all flex items-center justify-between ${
+                  selectedModel === 'flow-image-1'
+                    ? 'bg-pink-500/20 text-pink-300 border border-pink-500/30'
+                    : 'bg-slate-800/50 text-slate-400 hover:text-white hover:bg-slate-700/50'
+                }`}
+              >
+                <span>Flow-image 1</span>
+                <span className="text-xs">82 MB</span>
+              </button>
+              <button
+                onClick={() => {
+                  setSelectedModel('flow-image-1.5');
+                  setStyle('artistic');
+                  setResolution('1024x1024');
+                }}
+                className={`w-full px-4 py-3 rounded-xl text-sm font-medium transition-all flex items-center justify-between ${
+                  selectedModel === 'flow-image-1.5'
+                    ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                    : 'bg-slate-800/50 text-slate-400 hover:text-white hover:bg-slate-700/50'
+                }`}
+              >
+                <span>Flow-image 1.5 ✨</span>
+                <span className="text-xs">GPT Image 2</span>
+              </button>
+            </div>
+          </div>
+
           {/* Prompt */}
           <div className="glass rounded-2xl p-5">
             <h3 className="text-sm font-medium text-white mb-3 flex items-center gap-2">
@@ -111,12 +177,23 @@ export default function ImageAI() {
             <textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              placeholder={language === 'uk'
-                ? 'Опишіть зображення... (напр: cosmic nebula with stars, ocean sunset, geometric patterns)'
-                : 'Describe the image... (e.g: cosmic nebula with stars, ocean sunset, geometric patterns)'}
+              placeholder={selectedModel === 'flow-image-1.5'
+                ? (language === 'uk'
+                  ? 'Опишіть зображення... (напр: "photorealistic portrait with text: Hello World", "artistic landscape with vibrant colors")'
+                  : 'Describe the image... (e.g: "photorealistic portrait with text: Hello World", "artistic landscape with vibrant colors")')
+                : (language === 'uk'
+                  ? 'Опишіть зображення... (напр: cosmic nebula with stars, ocean sunset, geometric patterns)'
+                  : 'Describe the image... (e.g: cosmic nebula with stars, ocean sunset, geometric patterns)')}
               rows={4}
               className="w-full bg-slate-800/50 border border-indigo-500/20 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500/50 resize-none"
             />
+            {selectedModel === 'flow-image-1.5' && (
+              <p className="text-xs text-slate-500 mt-2">
+                💡 {language === 'uk' 
+                  ? 'Підтримує текст: додайте "text: ваш текст" для відображення на зображенні'
+                  : 'Supports text: add "text: your text" to display on image'}
+              </p>
+            )}
           </div>
 
           {/* Style */}
@@ -125,7 +202,7 @@ export default function ImageAI() {
               {language === 'uk' ? 'Стиль' : 'Style'}
             </h3>
             <div className="grid grid-cols-2 gap-2">
-              {styles.map((s) => (
+              {currentStyles.map((s) => (
                 <button
                   key={s.id}
                   onClick={() => setStyle(s.id)}
@@ -142,6 +219,32 @@ export default function ImageAI() {
             </div>
           </div>
 
+          {/* Quality (only for Flow-image 1.5) */}
+          {selectedModel === 'flow-image-1.5' && (
+            <div className="glass rounded-2xl p-5">
+              <h3 className="text-sm font-medium text-white mb-3">
+                {language === 'uk' ? 'Якість' : 'Quality'}
+              </h3>
+              <div className="space-y-2">
+                {(['standard', 'high', 'ultra'] as const).map((q) => (
+                  <button
+                    key={q}
+                    onClick={() => setQuality(q)}
+                    className={`w-full px-4 py-2 rounded-xl text-sm transition-all ${
+                      quality === q
+                        ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                        : 'bg-slate-800/50 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    {q === 'standard' && (language === 'uk' ? 'Стандартна' : 'Standard')}
+                    {q === 'high' && (language === 'uk' ? 'Висока' : 'High')}
+                    {q === 'ultra' && (language === 'uk' ? 'Ультра' : 'Ultra')}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Resolution */}
           <div className="glass rounded-2xl p-5">
             <h3 className="text-sm font-medium text-white mb-3">
@@ -152,10 +255,21 @@ export default function ImageAI() {
               onChange={(e) => setResolution(e.target.value)}
               className="w-full bg-slate-800/50 border border-indigo-500/20 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none"
             >
-              <option value="256x256">256 × 256</option>
-              <option value="512x512">512 × 512</option>
-              <option value="768x768">768 × 768</option>
-              <option value="1024x1024">1024 × 1024</option>
+              {selectedModel === 'flow-image-1' ? (
+                <>
+                  <option value="256x256">256 × 256</option>
+                  <option value="512x512">512 × 512</option>
+                  <option value="768x768">768 × 768</option>
+                  <option value="1024x1024">1024 × 1024</option>
+                </>
+              ) : (
+                <>
+                  <option value="512x512">512 × 512</option>
+                  <option value="768x768">768 × 768</option>
+                  <option value="1024x1024">1024 × 1024</option>
+                  <option value="1536x1536">1536 × 1536 (Ultra)</option>
+                </>
+              )}
             </select>
           </div>
 
@@ -163,7 +277,11 @@ export default function ImageAI() {
           <button
             onClick={handleGenerate}
             disabled={!prompt.trim() || isGenerating}
-            className="w-full py-4 rounded-2xl bg-gradient-to-r from-pink-500/30 to-purple-500/30 border border-pink-500/30 text-pink-200 hover:from-pink-500/40 hover:to-purple-500/40 text-sm font-medium transition-all flex items-center justify-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed"
+            className={`w-full py-4 rounded-2xl text-sm font-medium transition-all flex items-center justify-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed ${
+              selectedModel === 'flow-image-1.5'
+                ? 'bg-gradient-to-r from-purple-500/30 to-pink-500/30 border border-purple-500/30 text-purple-200 hover:from-purple-500/40 hover:to-pink-500/40'
+                : 'bg-gradient-to-r from-pink-500/30 to-purple-500/30 border border-pink-500/30 text-pink-200 hover:from-pink-500/40 hover:to-purple-500/40'
+            }`}
           >
             {isGenerating ? (
               <>
@@ -181,7 +299,11 @@ export default function ImageAI() {
           {isGenerating && (
             <div className="h-2 bg-slate-700/50 rounded-full overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-pink-500 to-purple-500 rounded-full transition-all duration-300"
+                className={`h-full rounded-full transition-all duration-300 ${
+                  selectedModel === 'flow-image-1.5'
+                    ? 'bg-gradient-to-r from-purple-500 to-pink-500'
+                    : 'bg-gradient-to-r from-pink-500 to-purple-500'
+                }`}
                 style={{ width: `${progress}%` }}
               />
             </div>
@@ -221,7 +343,7 @@ export default function ImageAI() {
                     <span className="text-slate-300">Prompt:</span> {history[0].prompt}
                   </p>
                   <p className="text-xs text-slate-500 mt-1">
-                    {history[0].resolution} • {styles.find(s => s.id === history[0].style)?.label[language]} • Flow-image 1
+                    {history[0].model} • {history[0].resolution} • {currentStyles.find(s => s.id === history[0].style)?.label[language]}
                   </p>
                 </div>
               </div>
@@ -314,7 +436,7 @@ export default function ImageAI() {
             <div className="mt-4 text-center">
               <p className="text-sm text-white">{previewImage.prompt}</p>
               <p className="text-xs text-slate-400 mt-1">
-                {previewImage.resolution} • {styles.find(s => s.id === previewImage.style)?.label[language]} • Flow-image 1
+                {previewImage.model} • {previewImage.resolution} • {currentStyles.find(s => s.id === previewImage.style)?.label[language]}
               </p>
             </div>
           </div>
@@ -333,8 +455,8 @@ export default function ImageAI() {
             <p className="text-white font-medium mt-1">{modelConfig.type}</p>
           </div>
           <div className="bg-slate-800/30 rounded-xl p-3 text-center">
-            <p className="text-slate-400">{language === 'uk' ? 'Швидкість' : 'Speed'}</p>
-            <p className="text-white font-medium mt-1">{modelConfig.speed}</p>
+            <p className="text-slate-400">{language === 'uk' ? 'Якість' : 'Quality'}</p>
+            <p className="text-white font-medium mt-1">{modelConfig.quality}</p>
           </div>
           <div className="bg-slate-800/30 rounded-xl p-3 text-center">
             <p className="text-slate-400">{language === 'uk' ? 'Макс. роздільна здатність' : 'Max Resolution'}</p>
@@ -345,10 +467,27 @@ export default function ImageAI() {
             <p className="text-white font-medium mt-1">Canvas API</p>
           </div>
         </div>
+        {selectedModel === 'flow-image-1.5' && 'features' in modelConfig && (
+          <div className="mt-4 pt-4 border-t border-slate-700/50">
+            <p className="text-xs text-slate-400 mb-2">{language === 'uk' ? 'Особливості:' : 'Features:'}</p>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+              {(modelConfig as typeof ADVANCED_IMAGE_MODEL_CONFIGS['flow-image-1.5']).features.map((feature: string, i: number) => (
+                <div key={i} className="flex items-center gap-2 text-xs text-slate-300">
+                  <span className="text-purple-400">✓</span>
+                  {feature}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         <p className="text-xs text-slate-500 mt-3">
-          {language === 'uk'
-            ? '💡 Flow-image 1 використовує процедурну генерацію на основі хешу промту. Кожне зображення унікальне та детерміноване — однаковий промт завжди дає однакове зображення.'
-            : '💡 Flow-image 1 uses procedural generation based on prompt hash. Each image is unique and deterministic — the same prompt always produces the same image.'}
+          {selectedModel === 'flow-image-1.5'
+            ? (language === 'uk'
+              ? '💡 Flow-image 1.5 використовує покращені алгоритми з багаторівневим рендерингом, підтримкою тексту на зображеннях та якістю як у GPT Image 2.'
+              : '💡 Flow-image 1.5 uses enhanced algorithms with multi-layer rendering, text support on images, and GPT Image 2 quality.')
+            : (language === 'uk'
+              ? '💡 Flow-image 1 використовує процедурну генерацію на основі хешу промту. Кожне зображення унікальне та детерміноване.'
+              : '💡 Flow-image 1 uses procedural generation based on prompt hash. Each image is unique and deterministic.')}
         </p>
       </div>
     </div>

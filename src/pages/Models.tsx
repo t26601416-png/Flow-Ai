@@ -3,11 +3,12 @@ import { useStore } from '../store';
 import { t } from '../i18n';
 import { MODEL_CONFIGS, loadModel, isModelLoaded, getLoadedModels, unloadModel } from '../services/neuralEngine';
 import { IMAGE_MODEL_CONFIGS } from '../services/imageGenerator';
+import { ADVANCED_IMAGE_MODEL_CONFIGS } from '../services/imageGeneratorV2';
 import { VIDEO_MODEL_CONFIGS } from '../services/videoGenerator';
 import type { FlowModel } from '../services/neuralEngine';
 import {
   Package, Download, Trash2, Brain, Cpu, HardDrive,
-  Zap, Loader, CheckCircle, Image, Video
+  Zap, Loader, CheckCircle, Image, Video, Sparkles
 } from 'lucide-react';
 
 export default function Models() {
@@ -52,7 +53,7 @@ export default function Models() {
         <div className="flex items-center gap-3">
           <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${loadedModels.length > 0 ? 'bg-green-500/10 text-green-400' : 'bg-slate-700/50 text-slate-400'}`}>
             <Brain className="w-4 h-4" />
-            <span className="text-xs">{loadedModels.length + 2}/4 {language === 'uk' ? 'доступно' : 'available'}</span>
+            <span className="text-xs">{loadedModels.length + 3}/5 {language === 'uk' ? 'доступно' : 'available'}</span>
           </div>
         </div>
       </div>
@@ -297,6 +298,77 @@ export default function Models() {
               ))}
             </div>
           </div>
+
+          {/* Flow-image 1.5 */}
+          {(() => {
+            const advImageModel = ADVANCED_IMAGE_MODEL_CONFIGS['flow-image-1.5'];
+            return (
+              <div className="mt-6 glass rounded-2xl p-6 ring-1 ring-purple-500/30">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center">
+                      <Sparkles className="w-7 h-7 text-purple-400" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                        {advImageModel.name}
+                        <span className="px-2 py-0.5 rounded-lg bg-purple-500/20 text-purple-300 text-xs">NEW</span>
+                      </h2>
+                      <p className="text-sm text-slate-400">{language === 'uk' ? advImageModel.description : advImageModel.descriptionEn}</p>
+                    </div>
+                  </div>
+                  <span className="px-3 py-1.5 rounded-xl bg-green-500/20 text-green-300 text-sm font-medium flex items-center gap-1">
+                    <CheckCircle className="w-4 h-4" /> Ready
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                  <div className="bg-slate-800/30 rounded-xl p-3 text-center">
+                    <Package className="w-4 h-4 text-purple-400 mx-auto mb-1" />
+                    <p className="text-xs text-slate-400">{language === 'uk' ? 'Тип' : 'Type'}</p>
+                    <p className="text-sm font-medium text-white">{advImageModel.type}</p>
+                  </div>
+                  <div className="bg-slate-800/30 rounded-xl p-3 text-center">
+                    <HardDrive className="w-4 h-4 text-pink-400 mx-auto mb-1" />
+                    <p className="text-xs text-slate-400">{language === 'uk' ? 'Розмір' : 'Size'}</p>
+                    <p className="text-sm font-medium text-white">{advImageModel.size}</p>
+                  </div>
+                  <div className="bg-slate-800/30 rounded-xl p-3 text-center">
+                    <Zap className="w-4 h-4 text-amber-400 mx-auto mb-1" />
+                    <p className="text-xs text-slate-400">{language === 'uk' ? 'Якість' : 'Quality'}</p>
+                    <p className="text-sm font-medium text-white">{advImageModel.quality}</p>
+                  </div>
+                  <div className="bg-slate-800/30 rounded-xl p-3 text-center">
+                    <Image className="w-4 h-4 text-cyan-400 mx-auto mb-1" />
+                    <p className="text-xs text-slate-400">{language === 'uk' ? 'Макс. розмір' : 'Max Size'}</p>
+                    <p className="text-sm font-medium text-white">{advImageModel.maxResolution}px</p>
+                  </div>
+                </div>
+
+                <div className="flex gap-3 mb-4">
+                  <button
+                    onClick={() => useStore.getState().setCurrentPage('imageAI')}
+                    className="flex-1 py-3 rounded-xl bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-200 hover:from-purple-500/30 hover:to-pink-500/30 text-sm font-medium transition-all flex items-center justify-center gap-2"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    {language === 'uk' ? 'Відкрити генератор' : 'Open Generator'}
+                  </button>
+                </div>
+
+                <div className="pt-4 border-t border-slate-700/50">
+                  <p className="text-xs text-slate-400 mb-2">{language === 'uk' ? 'Особливості:' : 'Features:'}</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {advImageModel.features.map((feature, i) => (
+                      <div key={i} className="flex items-center gap-2 text-xs text-slate-300">
+                        <span className="text-purple-400">✓</span>
+                        {feature}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
         </>
       )}
 

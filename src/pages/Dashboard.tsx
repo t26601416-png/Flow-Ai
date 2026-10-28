@@ -142,14 +142,14 @@ export default function Dashboard() {
                 <CheckCircle className="w-5 h-5 text-green-400" />
               </div>
               <div>
-                <h3 className="font-semibold text-white">Flow-image 1</h3>
-                <p className="text-xs text-slate-400">Image Generation • 15 MB</p>
+                <h3 className="font-semibold text-white">Flow-image 1 & 1.5</h3>
+                <p className="text-xs text-slate-400">Image Generation • 25 MB</p>
               </div>
             </div>
             <span className="px-2 py-1 rounded-lg bg-green-500/20 text-green-300 text-xs">Ready</span>
           </div>
           <p className="text-sm text-slate-400 mb-3">
-            {language === 'uk' ? 'Генерація зображень з 5 стилями' : 'Image generation with 5 styles'}
+            {language === 'uk' ? 'Дві моделі: базова + GPT Image 2 якість' : 'Two models: basic + GPT Image 2 quality'}
           </p>
           <button
             onClick={() => setCurrentPage('imageAI')}
@@ -192,7 +192,7 @@ export default function Dashboard() {
             <span className="text-slate-400 text-sm">{t('dashboard.installedModels', language)}</span>
             <Package className="w-5 h-5 text-purple-400" />
           </div>
-          <p className="font-semibold text-white text-3xl">{loadedModels.length + 2}/4</p>
+          <p className="font-semibold text-white text-3xl">{loadedModels.length + 3}/5</p>
           <p className="text-xs text-slate-500 mt-1">Flow Neural Engine</p>
         </div>
         <div className="glass rounded-2xl p-5">
