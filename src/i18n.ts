@@ -14,6 +14,7 @@ export const translations: Translations = {
   'nav.documents': { uk: 'Документи', en: 'Documents' },
   'nav.imageAI': { uk: 'Генерація зображень', en: 'Image Generation' },
   'nav.videoAI': { uk: 'Генерація відео', en: 'Video Generation' },
+  'nav.model3DAI': { uk: '3D Моделювання', en: '3D Modeling' },
   'nav.audioAI': { uk: 'Аудіо AI', en: 'Audio AI' },
   'nav.automation': { uk: 'Автоматизація', en: 'Automation' },
   'nav.apiServer': { uk: 'API Сервер', en: 'API Server' },

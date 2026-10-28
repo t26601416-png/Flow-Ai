@@ -6,15 +6,16 @@ import { IMAGE_MODEL_CONFIGS } from '../services/imageGenerator';
 import { ADVANCED_IMAGE_MODEL_CONFIGS } from '../services/imageGeneratorV2';
 import { VIDEO_MODEL_CONFIGS } from '../services/videoGenerator';
 import { ADVANCED_VIDEO_MODEL_CONFIGS } from '../services/videoGeneratorV2';
+import { MODEL_3D_CONFIGS } from '../services/model3DGenerator';
 import type { FlowModel } from '../services/neuralEngine';
 import {
   Package, Download, Trash2, Brain, Cpu, HardDrive,
-  Zap, Loader, CheckCircle, Image, Video, Sparkles
+  Zap, Loader, CheckCircle, Image, Video, Sparkles, Box
 } from 'lucide-react';
 
 export default function Models() {
   const { language, loadedModels, setLoadedModels, activeModel, setActiveModel, modelLoadStatus, setModelLoadStatus } = useStore();
-  const [activeTab, setActiveTab] = useState<'text' | 'image' | 'video'>('text');
+  const [activeTab, setActiveTab] = useState<'text' | 'image' | 'video' | '3d'>('text');
 
   const handleLoad = async (model: FlowModel) => {
     try {
@@ -54,7 +55,7 @@ export default function Models() {
         <div className="flex items-center gap-3">
           <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${loadedModels.length > 0 ? 'bg-green-500/10 text-green-400' : 'bg-slate-700/50 text-slate-400'}`}>
             <Brain className="w-4 h-4" />
-            <span className="text-xs">{loadedModels.length + 4}/7 {language === 'uk' ? 'доступно' : 'available'}</span>
+            <span className="text-xs">{loadedModels.length + 5}/8 {language === 'uk' ? 'доступно' : 'available'}</span>
           </div>
         </div>
       </div>
@@ -81,6 +82,13 @@ export default function Models() {
         >
           <Video className="w-4 h-4 inline mr-2" />
           {language === 'uk' ? 'Генерація відео' : 'Video Generation'}
+        </button>
+        <button
+          onClick={() => setActiveTab('3d')}
+          className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${activeTab === '3d' ? 'bg-cyan-500/20 text-cyan-300' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+        >
+          <Box className="w-4 h-4 inline mr-2" />
+          {language === 'uk' ? '3D Моделювання' : '3D Modeling'}
         </button>
       </div>
 
@@ -555,6 +563,106 @@ export default function Models() {
           </div>
         </>
       )}
+
+      {/* 3D Models Tab */}
+      {activeTab === '3d' && (() => {
+        const model3D = MODEL_3D_CONFIGS['flow-wan-1'];
+        return (
+          <>
+            <div className="glass rounded-2xl p-5 mb-6 border-cyan-500/20 border">
+              <div className="flex items-start gap-3">
+                <Box className="w-5 h-5 text-cyan-400 mt-0.5" />
+                <div>
+                  <h3 className="text-sm font-medium text-white mb-1">Flow-wan Engine</h3>
+                  <p className="text-xs text-slate-400">
+                    {language === 'uk'
+                      ? 'Модель Flow-wan 1 генерує 3D-моделі з текстових описів та фото. Використовує процедурну генерацію з Three.js, працює повністю локально.'
+                      : 'Flow-wan 1 generates 3D models from text descriptions and photos. Uses procedural generation with Three.js, works fully locally.'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="glass rounded-2xl p-6 ring-1 ring-cyan-500/30">
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 flex items-center justify-center">
+                    <Box className="w-7 h-7 text-cyan-400" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                      {model3D.name}
+                      <span className="px-2 py-0.5 rounded-lg bg-cyan-500/20 text-cyan-300 text-xs">NEW</span>
+                    </h2>
+                    <p className="text-sm text-slate-400">{language === 'uk' ? model3D.description : model3D.descriptionEn}</p>
+                  </div>
+                </div>
+                <span className="px-3 py-1.5 rounded-xl bg-green-500/20 text-green-300 text-sm font-medium flex items-center gap-1">
+                  <CheckCircle className="w-4 h-4" /> Ready
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                <div className="bg-slate-800/30 rounded-xl p-3 text-center">
+                  <Package className="w-4 h-4 text-cyan-400 mx-auto mb-1" />
+                  <p className="text-xs text-slate-400">{language === 'uk' ? 'Тип' : 'Type'}</p>
+                  <p className="text-sm font-medium text-white">{model3D.type}</p>
+                </div>
+                <div className="bg-slate-800/30 rounded-xl p-3 text-center">
+                  <HardDrive className="w-4 h-4 text-blue-400 mx-auto mb-1" />
+                  <p className="text-xs text-slate-400">{language === 'uk' ? 'Розмір' : 'Size'}</p>
+                  <p className="text-sm font-medium text-white">{model3D.size}</p>
+                </div>
+                <div className="bg-slate-800/30 rounded-xl p-3 text-center">
+                  <Zap className="w-4 h-4 text-amber-400 mx-auto mb-1" />
+                  <p className="text-xs text-slate-400">{language === 'uk' ? 'Швидкість' : 'Speed'}</p>
+                  <p className="text-sm font-medium text-white">{model3D.speed}</p>
+                </div>
+                <div className="bg-slate-800/30 rounded-xl p-3 text-center">
+                  <Box className="w-4 h-4 text-emerald-400 mx-auto mb-1" />
+                  <p className="text-xs text-slate-400">{language === 'uk' ? 'Експорт' : 'Export'}</p>
+                  <p className="text-sm font-medium text-white">OBJ Format</p>
+                </div>
+              </div>
+
+              <div className="flex gap-3 mb-4">
+                <button
+                  onClick={() => useStore.getState().setCurrentPage('model3DAI')}
+                  className="flex-1 py-3 rounded-xl bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-200 hover:from-cyan-500/30 hover:to-blue-500/30 text-sm font-medium transition-all flex items-center justify-center gap-2"
+                >
+                  <Box className="w-4 h-4" />
+                  {language === 'uk' ? 'Відкрити генератор' : 'Open Generator'}
+                </button>
+              </div>
+
+              <div className="pt-4 border-t border-slate-700/50">
+                <p className="text-xs text-slate-400 mb-2">{language === 'uk' ? 'Підтримувані об\'єкти:' : 'Supported objects:'}</p>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                  {[
+                    { uk: 'Куб', en: 'Cube', emoji: '🟦' },
+                    { uk: 'Сфера', en: 'Sphere', emoji: '🔵' },
+                    { uk: 'Циліндр', en: 'Cylinder', emoji: '🔷' },
+                    { uk: 'Конус', en: 'Cone', emoji: '🔺' },
+                    { uk: 'Тор', en: 'Torus', emoji: '🍩' },
+                    { uk: 'Стілець', en: 'Chair', emoji: '🪑' },
+                    { uk: 'Стіл', en: 'Table', emoji: '🪵' },
+                    { uk: 'Машина', en: 'Car', emoji: '🚗' },
+                    { uk: 'Будинок', en: 'House', emoji: '🏠' },
+                    { uk: 'Дерево', en: 'Tree', emoji: '🌳' },
+                    { uk: 'Ваза', en: 'Vase', emoji: '🏺' },
+                    { uk: 'Процедурні форми', en: 'Procedural shapes', emoji: '✨' },
+                  ].map((obj, i) => (
+                    <div key={i} className="flex items-center gap-2 text-xs text-slate-300">
+                      <span>{obj.emoji}</span>
+                      {language === 'uk' ? obj.uk : obj.en}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </>
+        );
+      })()}
 
       {/* Technical Info */}
       <div className="mt-6 glass rounded-2xl p-5">

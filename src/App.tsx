@@ -15,6 +15,7 @@ import APIServer from './pages/APIServer';
 import Documents from './pages/Documents';
 import Browser from './pages/Browser';
 import VideoAI from './pages/VideoAI';
+import Model3DAI from './pages/Model3DAI';
 import { Toaster } from 'react-hot-toast';
 
 function App() {
@@ -29,6 +30,7 @@ function App() {
       case 'agents': return <Agents />;
       case 'browser': return <Browser />;
       case 'videoAI': return <VideoAI />;
+      case 'model3DAI': return <Model3DAI />;
       case 'knowledge': return <KnowledgeBase />;
       case 'documents': return <Documents />;
       case 'imageAI': return <ImageAI />;
