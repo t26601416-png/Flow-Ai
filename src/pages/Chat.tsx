@@ -2,12 +2,13 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useStore, type ChatMessage } from '../store';
 import { t } from '../i18n';
 import { generateTextStream, isModelLoaded, loadModel, MODEL_CONFIGS } from '../services/neuralEngine';
+import { searchWeb, formatSearchResultsForAI } from '../services/webSearch';
 import type { FlowModel } from '../services/neuralEngine';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {
   Send, Square, Plus, Trash2, Copy, RefreshCw, MessageSquare,
-  Settings2, Check, X, Brain, Download, Loader, Globe
+  Settings2, Check, X, Brain, Download, Loader, Globe, Search
 } from 'lucide-react';
 
 export default function Chat() {
@@ -24,6 +25,8 @@ export default function Chat() {
   const [showSettings, setShowSettings] = useState(false);
   const [showChatList, setShowChatList] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [isWebSearching, setIsWebSearching] = useState(false);
+  const [webSearchResults, setWebSearchResults] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef(false);
 
@@ -202,6 +205,192 @@ export default function Chat() {
     }
   };
 
+  const handleWebSearchWithAI = async () => {
+    if (!input.trim() || isGenerating || isWebSearching) return;
+    
+    let chatId = activeChatId;
+    if (!chatId) {
+      createNewChat();
+      chatId = useStore.getState().activeChatId;
+      if (!chatId) return;
+    }
+
+    const userQuery = input.trim();
+    const userMessage: ChatMessage = {
+      id: `msg-${Date.now()}`,
+      role: 'user',
+      content: userQuery,
+      timestamp: Date.now(),
+    };
+
+    addMessage(chatId, userMessage);
+    
+    const currentChat = useStore.getState().chats.find(c => c.id === chatId);
+    if (currentChat && currentChat.messages.length <= 1) {
+      updateChat(chatId, { title: userQuery.slice(0, 50) });
+    }
+
+    setInput('');
+    setIsWebSearching(true);
+    abortRef.current = false;
+
+    // Add searching message
+    const searchingMessage: ChatMessage = {
+      id: `msg-${Date.now()}-searching`,
+      role: 'assistant',
+      content: `🔍 ${language === 'uk' ? 'Шукаю інформацію в інтернеті...' : 'Searching the web...'}\n\n*Запит: "${userQuery}"*`,
+      timestamp: Date.now(),
+      model: currentModel,
+    };
+    addMessage(chatId, searchingMessage);
+
+    try {
+      // Perform web search
+      const searchResults = await searchWeb(userQuery);
+      const webContext = formatSearchResultsForAI(searchResults);
+      
+      setWebSearchResults(webContext);
+
+      // Update searching message with results preview
+      const resultsPreview = searchResults.results.slice(0, 3).map((r, i) => 
+        `${i + 1}. **${r.title}**\n   ${r.snippet.substring(0, 150)}${r.snippet.length > 150 ? '...' : ''}`
+      ).join('\n\n');
+
+      const updatedSearchingMessage: ChatMessage = {
+        ...searchingMessage,
+        content: `🔍 ${language === 'uk' ? 'Знайдено інформацію' : 'Found information'} (${searchResults.results.length} ${language === 'uk' ? 'результатів' : 'results'})\n\n${resultsPreview}\n\n🧠 ${language === 'uk' ? 'Генерую відповідь...' : 'Generating response...'}`,
+      };
+      
+      const chat = useStore.getState().chats.find(c => c.id === chatId);
+      if (chat) {
+        const msgs = [...chat.messages];
+        const lastMsg = msgs[msgs.length - 1];
+        if (lastMsg && lastMsg.id === searchingMessage.id) {
+          lastMsg.content = updatedSearchingMessage.content;
+          useStore.getState().updateChat(chatId, { messages: msgs });
+        }
+      }
+
+      // Ensure model is loaded
+      if (!isModelLoaded(currentModel)) {
+        setModelLoadStatus(currentModel, { loading: true, progress: 0, status: 'Завантаження моделі...' });
+        await loadModel(currentModel, (progress, status) => {
+          setModelLoadStatus(currentModel, { loading: true, progress, status });
+        });
+        setModelLoadStatus(currentModel, { loading: false, progress: 100, status: 'Готова' });
+        setLoadedModels([...new Set([...loadedModels, currentModel])]);
+      }
+
+      // Build prompt with web context
+      const chat2 = useStore.getState().chats.find(c => c.id === chatId);
+      if (!chat2) return;
+
+      let prompt = '';
+      if (chat2.systemPrompt) {
+        prompt += chat2.systemPrompt + '\n\n';
+      }
+
+      // Add web context
+      prompt += webContext + '\n\n';
+
+      // Add conversation history
+      const recentMessages = chat2.messages.slice(-4);
+      for (const msg of recentMessages) {
+        if (msg.role === 'user') {
+          prompt += `User: ${msg.content}\n`;
+        } else if (msg.role === 'assistant' && !msg.content.includes('🔍')) {
+          prompt += `Assistant: ${msg.content}\n`;
+        }
+      }
+      prompt += 'Assistant:';
+
+      // Remove searching message and add final response
+      const chat3 = useStore.getState().chats.find(c => c.id === chatId);
+      if (chat3) {
+        const msgs = chat3.messages.filter(m => m.id !== searchingMessage.id);
+        useStore.getState().updateChat(chatId, { messages: msgs });
+      }
+
+      // Add assistant message for response
+      const assistantMessage: ChatMessage = {
+        id: `msg-${Date.now()}-assistant`,
+        role: 'assistant',
+        content: '',
+        timestamp: Date.now(),
+        model: currentModel,
+      };
+      addMessage(chatId, assistantMessage);
+
+      setIsWebSearching(false);
+      setIsGenerating(true);
+
+      // Generate response with web context
+      let fullResponse = '';
+      await generateTextStream(currentModel, prompt, {
+        maxTokens,
+        temperature: Math.max(0.3, temperature - 0.2), // Lower temperature for factual responses
+        topP,
+        topK,
+        repetitionPenalty,
+        onToken: (token) => {
+          if (abortRef.current) return;
+          fullResponse += token;
+          const currentChat = useStore.getState().chats.find(c => c.id === chatId);
+          if (currentChat) {
+            const msgs = [...currentChat.messages];
+            const lastMsg = msgs[msgs.length - 1];
+            if (lastMsg && lastMsg.role === 'assistant') {
+              lastMsg.content = fullResponse;
+              useStore.getState().updateChat(chatId, { messages: msgs });
+            }
+          }
+        },
+      });
+
+      // Add sources to response
+      const sources = searchResults.results
+        .filter(r => r.url)
+        .slice(0, 3)
+        .map(r => `[${r.title}](${r.url})`)
+        .join(' • ');
+
+      if (sources) {
+        const finalResponse = fullResponse + `\n\n---\n📚 ${language === 'uk' ? 'Джерела' : 'Sources'}: ${sources}`;
+        const chat4 = useStore.getState().chats.find(c => c.id === chatId);
+        if (chat4) {
+          const msgs = [...chat4.messages];
+          const lastMsg = msgs[msgs.length - 1];
+          if (lastMsg && lastMsg.role === 'assistant') {
+            lastMsg.content = finalResponse;
+            useStore.getState().updateChat(chatId, { messages: msgs });
+          }
+        }
+      }
+
+    } catch (err: any) {
+      const errorMsg = language === 'uk'
+        ? `⚠️ Помилка пошуку: ${err.message}`
+        : `⚠️ Search error: ${err.message}`;
+      
+      const chat = useStore.getState().chats.find(c => c.id === chatId);
+      if (chat) {
+        const msgs = chat.messages.filter(m => m.id !== searchingMessage.id);
+        msgs.push({
+          id: `msg-${Date.now()}-error`,
+          role: 'assistant',
+          content: errorMsg,
+          timestamp: Date.now(),
+          model: currentModel,
+        });
+        useStore.getState().updateChat(chatId, { messages: msgs });
+      }
+    } finally {
+      setIsWebSearching(false);
+      setIsGenerating(false);
+      setWebSearchResults(null);
+    }
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -284,10 +473,24 @@ export default function Chat() {
               <option value="flow-1-pro">Flow-1 Pro 🧠</option>
             </select>
             <button
+              onClick={() => {
+                const lastUserMsg = activeChat ? [...activeChat.messages].reverse().find(m => m.role === 'user') : null;
+                if (lastUserMsg) {
+                  setInput(lastUserMsg.content);
+                  setTimeout(() => handleWebSearchWithAI(), 100);
+                }
+              }}
+              disabled={!activeChat || activeChat.messages.filter(m => m.role === 'user').length === 0 || isWebSearching}
+              className="p-2 rounded-lg hover:bg-cyan-500/20 text-cyan-400 disabled:opacity-30 disabled:cursor-not-allowed"
+              title={language === 'uk' ? 'Шукати в інтернеті та відповісти (за останнім повідомленням)' : 'Search web & answer (last message)'}
+            >
+              {isWebSearching ? <Loader className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+            </button>
+            <button
               onClick={() => handleWebSearch('lastMessage')}
               disabled={!activeChat || activeChat.messages.filter(m => m.role === 'user').length === 0}
               className="p-2 rounded-lg hover:bg-white/5 text-slate-400 disabled:opacity-30 disabled:cursor-not-allowed"
-              title={language === 'uk' ? 'Шукати в інтернеті' : 'Search the web'}
+              title={language === 'uk' ? 'Відкрити пошук в браузері' : 'Open search in browser'}
             >
               <Globe className="w-4 h-4" />
             </button>
@@ -424,14 +627,26 @@ export default function Chat() {
               />
             </div>
             <button
+              onClick={handleWebSearchWithAI}
+              disabled={!input.trim() || isGenerating || isWebSearching}
+              className="px-4 py-3 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 hover:bg-cyan-500/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1.5"
+              title={language === 'uk' ? 'Шукати в інтернеті та відповісти' : 'Search web & answer'}
+            >
+              {isWebSearching ? (
+                <Loader className="w-5 h-5 animate-spin" />
+              ) : (
+                <Search className="w-5 h-5" />
+              )}
+            </button>
+            <button
               onClick={() => handleWebSearch('input')}
               disabled={!input.trim()}
               className="px-4 py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 hover:bg-emerald-500/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-              title={language === 'uk' ? 'Шукати в інтернеті' : 'Search the web'}
+              title={language === 'uk' ? 'Відкрити в браузері' : 'Open in browser'}
             >
               <Globe className="w-5 h-5" />
             </button>
-            {isGenerating ? (
+            {isGenerating || isWebSearching ? (
               <button
                 onClick={handleStop}
                 className="px-4 py-3 rounded-xl bg-red-500/20 border border-red-500/30 text-red-400 hover:bg-red-500/30 transition-colors"
