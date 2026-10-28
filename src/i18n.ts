@@ -7,6 +7,7 @@ export const translations: Translations = {
   'nav.dashboard': { uk: 'Панель', en: 'Dashboard' },
   'nav.chat': { uk: 'AI Чат', en: 'AI Chat' },
   'nav.flowBuilder': { uk: 'Flow Builder', en: 'Flow Builder' },
+  'nav.flowCodex': { uk: 'Flow Codex', en: 'Flow Codex' },
   'nav.agents': { uk: 'AI Агенти', en: 'AI Agents' },
   'nav.models': { uk: 'Моделі', en: 'Models' },
   'nav.browser': { uk: 'Браузер', en: 'Browser' },

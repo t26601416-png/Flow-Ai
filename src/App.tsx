@@ -16,6 +16,7 @@ import Documents from './pages/Documents';
 import Browser from './pages/Browser';
 import VideoAI from './pages/VideoAI';
 import Model3DAI from './pages/Model3DAI';
+import FlowCodex from './pages/FlowCodex';
 import { Toaster } from 'react-hot-toast';
 
 function App() {
@@ -26,6 +27,7 @@ function App() {
       case 'dashboard': return <Dashboard />;
       case 'chat': return <Chat />;
       case 'flowBuilder': return <FlowBuilder />;
+      case 'flowCodex': return <FlowCodex />;
       case 'models': return <Models />;
       case 'agents': return <Agents />;
       case 'browser': return <Browser />;

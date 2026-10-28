@@ -5,13 +5,14 @@ import { isModelLoaded, getLoadedModels } from '../services/neuralEngine';
 import {
   LayoutDashboard, MessageSquare, GitBranch, Bot, Package,
   BookOpen, FileText, Image, Mic, Zap, Server, Settings,
-  ChevronLeft, ChevronRight, Brain, Cpu, Globe, Video, Box
+  ChevronLeft, ChevronRight, Brain, Cpu, Globe, Video, Box, Code2
 } from 'lucide-react';
 
 const navItems = [
   { id: 'dashboard', icon: LayoutDashboard, label: 'nav.dashboard' },
   { id: 'chat', icon: MessageSquare, label: 'nav.chat' },
   { id: 'flowBuilder', icon: GitBranch, label: 'nav.flowBuilder' },
+  { id: 'flowCodex', icon: Code2, label: 'nav.flowCodex' },
   { id: 'agents', icon: Bot, label: 'nav.agents' },
   { id: 'models', icon: Package, label: 'nav.models' },
   { id: 'browser', icon: Globe, label: 'nav.browser' },
