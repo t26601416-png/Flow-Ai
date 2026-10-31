@@ -104,6 +104,26 @@ export default function Sidebar() {
         </div>
       )}
 
+      {/* Hotkeys Info */}
+      {!collapsed && (
+        <div className="p-3 border-t border-indigo-500/20">
+          <div className="text-[10px] text-slate-500 space-y-1">
+            <div className="flex items-center gap-2">
+              <kbd className="px-1.5 py-0.5 bg-slate-700/50 rounded text-[9px]">Ctrl+1-9</kbd>
+              <span>Навігація</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <kbd className="px-1.5 py-0.5 bg-slate-700/50 rounded text-[9px]">Ctrl+K</kbd>
+              <span>Чат</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <kbd className="px-1.5 py-0.5 bg-slate-700/50 rounded text-[9px]">Ctrl+,</kbd>
+              <span>Налаштування</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Collapse button */}
       <div className="p-2 border-t border-indigo-500/20">
         <button

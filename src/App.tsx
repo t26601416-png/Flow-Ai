@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useStore } from './store';
 import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
@@ -20,7 +20,37 @@ import FlowCodex from './pages/FlowCodex';
 import { Toaster } from 'react-hot-toast';
 
 function App() {
-  const { currentPage, theme } = useStore();
+  const { currentPage, theme, setCurrentPage } = useStore();
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl/Cmd + 1-9 for quick navigation
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey) {
+        const pages = ['dashboard', 'chat', 'flowBuilder', 'flowCodex', 'models', 'agents', 'browser', 'imageAI', 'videoAI'];
+        const num = parseInt(e.key);
+        if (num >= 1 && num <= 9 && pages[num - 1]) {
+          e.preventDefault();
+          setCurrentPage(pages[num - 1]);
+        }
+      }
+      
+      // Ctrl/Cmd + K for search
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        setCurrentPage('chat');
+      }
+      
+      // Ctrl/Cmd + , for settings
+      if ((e.ctrlKey || e.metaKey) && e.key === ',') {
+        e.preventDefault();
+        setCurrentPage('settings');
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [setCurrentPage]);
 
   const renderPage = () => {
     switch (currentPage) {
