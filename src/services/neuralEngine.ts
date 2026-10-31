@@ -183,7 +183,9 @@ export async function generateText(
     do_sample: true,
   });
 
-  const generatedText = result[0]?.generated_text || '';
+  // Handle both array and single object results
+  const resultArray = Array.isArray(result) ? result : [result];
+  const generatedText = (resultArray[0] as any)?.generated_text || '';
   // Remove the prompt from the output
   const response = generatedText.slice(prompt.length).trim();
   
@@ -225,7 +227,9 @@ export async function generateTextStream(
     do_sample: true,
   });
 
-  const generatedText = result[0]?.generated_text || '';
+  // Handle both array and single object results
+  const resultArray2 = Array.isArray(result) ? result : [result];
+  const generatedText = (resultArray2[0] as any)?.generated_text || '';
   const response = generatedText.slice(prompt.length).trim();
 
   // Stream tokens to callback

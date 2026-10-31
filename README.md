@@ -6,6 +6,24 @@
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Web-lightgrey)
 
+## ⚡ Швидкий старт
+
+### 🌐 Веб-версія (миттєвий запуск):
+```bash
+# Windows: двічі клікніть на start.bat
+# Linux/Mac:
+chmod +x start.sh && ./start.sh
+```
+Відкрийте: **http://localhost:1420**
+
+### 📦 Створення .exe файлу (один клік):
+```bash
+# Windows: двічі клікніть на build-exe.bat
+# Linux/Mac:
+chmod +x build-exe.sh && ./build-exe.sh
+```
+Детальніше: [QUICK_START.md](QUICK_START.md)
+
 ---
 
 ## ✨ Можливості
