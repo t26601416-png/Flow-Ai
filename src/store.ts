@@ -169,6 +169,7 @@ export const useStore = create<AppState>()(
         'flow-1-pro': { loading: false, progress: 0, status: '' },
         'flow-argon-2': { loading: false, progress: 0, status: '' },
         'flow-1-6-carbon': { loading: false, progress: 0, status: '' },
+        'flow-1-audio': { loading: false, progress: 0, status: '' },
       },
       setModelLoadStatus: (model, status) => set((s) => ({
         modelLoadStatus: { ...s.modelLoadStatus, [model]: status }

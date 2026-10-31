@@ -58,7 +58,7 @@ export default function Dashboard() {
 
       {/* Model Status Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {(['flow-1-flash', 'flow-1-pro', 'flow-argon-2', 'flow-1-6-carbon'] as FlowModel[]).map((modelId) => {
+        {(['flow-1-flash', 'flow-1-pro', 'flow-argon-2', 'flow-1-6-carbon', 'flow-1-audio'] as FlowModel[]).map((modelId) => {
           const config = MODEL_CONFIGS[modelId];
           const status = modelLoadStatus[modelId];
           const isLoaded = loadedModels.includes(modelId);
@@ -217,7 +217,7 @@ export default function Dashboard() {
             <span className="text-slate-400 text-sm">{t('dashboard.installedModels', language)}</span>
             <Package className="w-5 h-5 text-purple-400" />
           </div>
-          <p className="font-semibold text-white text-3xl">{loadedModels.length + 6}/9</p>
+          <p className="font-semibold text-white text-3xl">{loadedModels.length + 7}/10</p>
           <p className="text-xs text-slate-500 mt-1">Flow Neural Engine</p>
         </div>
         <div className="glass rounded-2xl p-5">

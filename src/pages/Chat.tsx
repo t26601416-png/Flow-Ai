@@ -490,6 +490,7 @@ export default function Chat() {
               <option value="flow-1-pro">Flow-1 Pro 🧠</option>
               <option value="flow-argon-2">Flow-argon 2 🔥</option>
               <option value="flow-1-6-carbon">Flow 1.6 Carbon 💎</option>
+              <option value="flow-1-audio">Flow-1 Audio 🎵</option>
             </select>
             <button
               onClick={() => {

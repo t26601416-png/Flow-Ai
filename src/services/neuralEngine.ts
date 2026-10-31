@@ -7,7 +7,7 @@ if (env.backends?.onnx?.wasm) {
   (env.backends.onnx.wasm as any).numThreads = 4;
 }
 
-export type FlowModel = 'flow-1-flash' | 'flow-1-pro' | 'flow-argon-2' | 'flow-1-6-carbon';
+export type FlowModel = 'flow-1-flash' | 'flow-1-pro' | 'flow-argon-2' | 'flow-1-6-carbon' | 'flow-1-audio';
 
 interface ModelConfig {
   id: string;
@@ -75,6 +75,19 @@ export const MODEL_CONFIGS: Record<FlowModel, ModelConfig> = {
     quality: 'Відмінна',
     category: 'Professional AI',
     maxTokens: 768,
+  },
+  'flow-1-audio': {
+    id: 'flow-1-audio',
+    hfModel: 'Web Speech API',
+    name: 'Flow-1 Audio',
+    description: 'Аудіо нейромережа для озвучення тексту та обробки аудіофайлів. Підтримує різні голоси та мови.',
+    descriptionEn: 'Audio neural network for text-to-speech and audio file processing. Supports multiple voices and languages.',
+    size: 'Вбудований',
+    params: 'Browser API',
+    speed: 'Миттєва',
+    quality: 'Відмінна',
+    category: 'Audio AI',
+    maxTokens: 0,
   },
 };
 
