@@ -103,6 +103,19 @@ export default function Chat() {
       if (!chat) return;
       
       let prompt = '';
+      
+      // Enhanced system prompt for Flow 1.6 Carbon
+      if (currentModel === 'flow-1-6-carbon') {
+        prompt += 'You are Flow 1.6 Carbon, an advanced AI assistant specialized in English language understanding and business text generation. You excel at:\n';
+        prompt += '- Understanding complex English queries and providing clear, professional responses\n';
+        prompt += '- Generating business emails, reports, proposals, and professional documents\n';
+        prompt += '- Writing marketing copy, product descriptions, and technical documentation\n';
+        prompt += '- Analyzing text and providing structured, actionable insights\n';
+        prompt += '- Maintaining professional tone while being helpful and engaging\n\n';
+        prompt += 'Always respond in the same language as the user\'s query. If the user writes in English, respond in English. If in Ukrainian, respond in Ukrainian.\n';
+        prompt += 'Focus on delivering practical, business-oriented content that is clear, concise, and professional.\n\n';
+      }
+      
       if (chat.systemPrompt) {
         prompt += chat.systemPrompt + '\n\n';
       }
@@ -289,6 +302,14 @@ export default function Chat() {
 
       // Add web context
       prompt += webContext + '\n\n';
+      
+      // Enhanced prompt for Flow 1.6 Carbon with web search
+      if (currentModel === 'flow-1-6-carbon') {
+        prompt += 'You are Flow 1.6 Carbon. Use the web search results above to provide accurate, up-to-date information. ';
+        prompt += 'Synthesize the information into a clear, professional response. ';
+        prompt += 'If the search results are insufficient, acknowledge this and provide what you know. ';
+        prompt += 'Always cite sources when using information from the web search.\n\n';
+      }
 
       // Add conversation history
       const recentMessages = chat2.messages.slice(-4);
@@ -468,6 +489,7 @@ export default function Chat() {
               <option value="flow-1-flash">Flow-1 Flash ⚡</option>
               <option value="flow-1-pro">Flow-1 Pro 🧠</option>
               <option value="flow-argon-2">Flow-argon 2 🔥</option>
+              <option value="flow-1-6-carbon">Flow 1.6 Carbon 💎</option>
             </select>
             <button
               onClick={() => {

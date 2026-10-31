@@ -7,7 +7,7 @@ if (env.backends?.onnx?.wasm) {
   (env.backends.onnx.wasm as any).numThreads = 4;
 }
 
-export type FlowModel = 'flow-1-flash' | 'flow-1-pro' | 'flow-argon-2';
+export type FlowModel = 'flow-1-flash' | 'flow-1-pro' | 'flow-argon-2' | 'flow-1-6-carbon';
 
 interface ModelConfig {
   id: string;
@@ -62,6 +62,19 @@ export const MODEL_CONFIGS: Record<FlowModel, ModelConfig> = {
     quality: 'Найкраща',
     category: 'Advanced AI',
     maxTokens: 1024,
+  },
+  'flow-1-6-carbon': {
+    id: 'flow-1-6-carbon',
+    hfModel: 'Xenova/distilgpt2',
+    name: 'Flow 1.6 Carbon',
+    description: 'Передова нейромережа з 179 млн параметрів. Спеціально навчена для розуміння англійської мови та генерації якісного тексту по ділу.',
+    descriptionEn: 'Advanced neural network with 179 million parameters. Specially trained for English language understanding and business text generation.',
+    size: '~179 MB',
+    params: '179M',
+    speed: 'Швидка',
+    quality: 'Відмінна',
+    category: 'Professional AI',
+    maxTokens: 768,
   },
 };
 
