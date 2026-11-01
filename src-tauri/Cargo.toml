@@ -1,0 +1,19 @@
+[package]
+name = "local-flow-ai"
+version = "1.0.0"
+description = "Local Flow AI - Повноцінна локальна AI платформа"
+authors = ["Local Flow AI Team"]
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2.0", features = [] }
+
+[dependencies]
+tauri = { version = "2.0", features = [] }
+tauri-plugin-opener = "2.0"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]
